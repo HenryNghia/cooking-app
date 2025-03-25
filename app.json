@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "cooking-app",
-    "slug": "cooking-app",
+    "slug": "cookingapp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -36,6 +36,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b5331856-44d2-47c0-95cd-5c8e4c3afa90"
+      }
+    },
+    "owner": "henry170622"
   }
 }

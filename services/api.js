@@ -1,20 +1,23 @@
-// src/services/api.js
-import axios from 'axios'
+// services/api.ts
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.2.11:3000/api'; // Thay bằng base URL của API của bạn
+const api = axios.create({
+	baseURL: 'http://192.168.2.11:8000/api/', // Đổi thành API của bạn
+	headers: {
+		'Content-Type': 'application/json',
+	},
+});
 
-export const callApi = async (endpoint, method = 'GET', data = null) => {
-    try {
-        const url = `${BASE_URL}/${endpoint}`;
-        const config = {
-            method,
-            url,
-            data,
-        };
-        const response = await axios(config);
-        return response.data;
-    } catch (error) {
-        console.error(`API call failed to ${endpoint}:`, error);
-        throw error;
-    }
-};
+// Gắn token tự động trước mỗi request
+api.interceptors.request.use(async (config) => {
+	const token = await AsyncStorage.getItem('token');
+	if (token) {
+		config.headers.Authorization = `Bearer ${token}`;
+	}
+	return config;
+}, (error) => {
+	return Promise.reject(error);
+});
+
+export default api;

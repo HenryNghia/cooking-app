@@ -1,52 +1,39 @@
+import { View, Text } from 'react-native'
+import React from 'react'
 import { StyleSheet, Text, View, TouchableOpacity, FlatList, Image } from 'react-native'
 import React from 'react'
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen'
-import { useEffect, useState } from "react";
-import { getRecipeData } from '../services/recipeService';
+import { router, useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons'
 
 
-const recipe = () => {
-    const [recipes, setRecipes] = useState([]);
-    const [message, setMessage] = useState(''); // State để lưu trữ message
-
-
-    useEffect(() => {
-        GetRecipe();
-    }, []);
-
-    const GetRecipe = async () => {
-        try {
-            const data = await getRecipeData();
-            console.log(data.data)
-            if (data.status == 200) {
-                setRecipes(data.data); // Lấy mảng data từ phản hồi
-                setMessage(data.message); // State để lưu trữ message
-                // console.log(recipes);
-                // console.log(message);
-            } else {
-                setMessage(data.message); // State để lưu trữ message
-            }
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
-    };
-
+export default function favoriteCard() {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.heading}>10 Recommendations</Text>
+                <Text style={styles.heading}>Gợi ý</Text>
                 <TouchableOpacity>
                     <Text style={styles.seeMore}>See More &gt;</Text>
                 </TouchableOpacity>
             </View>
             {/* card recipes */}
             <View style={styles.listContent}>
-                {recipes.slice(0, 10).map((item, index) => {
+                {recipes.slice(0, 4).map((item, index) => {
                     return (
                         <TouchableOpacity
+                            onPress={handleRegister}
                             key={index}
                             style={styles.container_card}>
-                            <Image source={{ uri: item.image }} style={styles.image} />
+                            <Image source={{ uri: 'https://cdn.tgdd.vn/Files/2020/08/28/1284763/7-cong-thuc-lam-ga-ran-gion-rum-ngon-hon-ca-ngoai-hang-de-ban-tro-tai-202202231023431295.jpg' }} style={styles.image} />
+                            <TouchableOpacity
+                            >
+                                <Ionicons name="bookmarks-outline" size={24} color="white" style={{
+                                    position: 'absolute',
+                                    top: 10,
+                                    right: 10,
+                                }} />
+                            </TouchableOpacity>
+
                             <View style={styles.contentContainer}>
                                 <Text style={styles.title}>{item.title}</Text>
                                 <View style={styles.group}>
@@ -62,12 +49,10 @@ const recipe = () => {
     )
 }
 
-export default recipe
-
 const styles = StyleSheet.create({
     // test css
     container: {
-   
+
         padding: 10,
         flex: 1,
     },
@@ -84,7 +69,7 @@ const styles = StyleSheet.create({
         gap: 12,
         marginTop: 15,
         display: 'flex',
-        flexWrap:'wrap',
+        flexWrap: 'wrap',
         flexDirection: 'row'
     },
     container_card: {
@@ -93,7 +78,9 @@ const styles = StyleSheet.create({
         margin: 6,
         width: '45%', // 2 cột
         height: 235,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        height: 'auto',
+        position: 'relative'
     },
 
     image: {
@@ -102,23 +89,24 @@ const styles = StyleSheet.create({
         overflow: 'hidden'
     },
     contentContainer: {
-        paddingBottom: 5,
-        paddingTop: 0,
-        paddingRight: 10,
-        paddingLeft: 10,
+        marginTop: 0,
+        marginRight: 10,
+        marginLeft: 10,
+        height: 100,
     },
     title:
     {
-        padding: 6,
+        width: '100%',
+        height: 60,
         color: 'black',
-        fontSize: hp(2, 7),
+        fontSize: 17,
         fontFamily: 'sans-serif',
         textTransform: 'capitalize',
+        marginTop: 10,
     },
     group: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: 20,
     },
 
     chef: {
@@ -133,6 +121,4 @@ const styles = StyleSheet.create({
         color: 'red',
         fontSize: 16
     }
-
-
 }) 

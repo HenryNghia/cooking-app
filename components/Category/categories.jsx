@@ -2,37 +2,38 @@ import { StyleSheet, Text, View, ScrollView, Alert, TouchableOpacity, Image, Fla
 import React, { useEffect, useState } from 'react'
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen'
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import {getCategoryData} from '../services/categoryService';
+import { getAllCategories } from '../../services/categoryService';
+import { useRouter } from 'expo-router';
 
 export default function category() {
 
     const [activeCategory, setActiveCategory] = useState('beef'); // ✅ Đặt trước
     const [categories, setCategories] = useState([]);
     const [message, setMessage] = useState('');
-
+    const router = useRouter();
     useEffect(() => {
-        GetCategory();
+        fetchCategories();
     }, []);
 
-    const GetCategory = async () => {
+    const fetchCategories = async () => {
+
         try {
-            const data = await getCategoryData();
-            if (data.status == 200) {
-                setCategories(data.data);
-                setMessage(data.message);
+            const res = await getAllCategories();
+            if (res.status == 200) {
+                setCategories(res.data);
+                setMessage(res.message);
             } else {
-                setMessage(data.message);
+                setMessage(res.message);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
         }
     };
-
     return (
         <View style={styles.wrapper}>
             <View style={styles.header}>
                 <Text style={styles.heading}>Danh mục</Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => alert('Navigate to See More!')}>
                     <Text style={styles.seeMore}>See More &gt;</Text>
                 </TouchableOpacity>
             </View>
@@ -47,7 +48,15 @@ export default function category() {
                     return (
                         <TouchableOpacity
                             key={index}
-                            onPress={() => setActiveCategory(cat.name_category)}
+                            onPress={() => router.push(
+                                {
+                                    pathname: '/category/category',
+                                    params: { 
+                                        id: cat.id,
+                                        name_category: cat.name_category,
+                                    }
+                                }
+                            )}
                             style={styles.button}
                         >
                             <View style={styles.categoryItem}>
@@ -80,8 +89,17 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 10,
     },
-    heading: { fontSize: 16, fontWeight: 'bold' },
-    seeMore: { color: '#888' },
+    heading: {
+        fontSize: 20, // Slightly larger heading
+        fontWeight: 'bold',
+        color: '#FFFFFF', // White heading text
+    },
+
+    seeMore: {
+        color: '#FFA500', // Orange "See More"
+        fontSize: 14,
+        fontWeight: '500',
+    },
     container: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -97,14 +115,15 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     item: {
-        padding: 8,
-        borderRadius: hp(6),
+        padding: 4,
+        borderRadius: hp(2),
     },
     image: {
-        width: hp(6), // Sử dụng hàm hp()
-        height: hp(6), // Sử dụng hàm hp()
-        alignItems: 'center', // Thay thế "items-center"
+        width: hp(8),
+        height: hp(8),
+        alignItems: 'center',
         borderRadius: 999,
+        objectFit: 'cover'
 
     },
     active: {
@@ -115,7 +134,7 @@ const styles = StyleSheet.create({
     },
     text: {
         // fontSize: hp(1.9),
-        color: 'black',
+        color: '#FFF',
         textAlign: 'center',
         textTransform: 'capitalize',
         fontWeight: 700,

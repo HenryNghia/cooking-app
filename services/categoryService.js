@@ -1,21 +1,39 @@
-import { callApi } from "./api";
+import api from './api';
 
-export const getCategoryData = async () => {
-    return callApi('category/data');
+// Lấy tất cả công thức
+export const getAllCategories = async () => {
+    const response = await api.get('category/data');
+    return response.data;
 };
 
-export const searchCategoryData = async () => {
-    return callApi('category/seacrh-data');
+// Lấy công thức theo ID
+export const getCategoryById = async (id) => {
+    const response = await api.get(`category/${id}`);
+    return response.data;
 };
 
-export const createCategoryData = async (categoryData) => {
-    return callApi('category/create-data', 'PUT', categoryData);
+// Tìm kiếm công thức theo từ khóa
+export const searchCategory = async (keyword) => {
+    const response = await api.post(`category/search-data`, {
+        params: { query: keyword } // Gửi keyword qua query param
+    });
+    return response.data;
 };
 
-export const updateCategoryData = async (id, categoryData) => {
-    return callApi(`category/update-data/${id}`, 'POST', categoryData);
+// Thêm công thức
+export const addCategory = async (categoryData) => {
+    const response = await api.post('category/create-data', categoryData);
+    return response.data;
 };
 
-export const deleteCategoryData = async (id) => {
-    return callApi(`category/delete-data/${id}`, 'DELETE');
+// Cập nhật công thức
+export const updateCategory = async (id, categoryData) => {
+    const response = await api.put(`category/update-data/${id}`, categoryData);
+    return response.data;
+};
+
+// Xoá công thức
+export const deleteCategory = async (id) => {
+    const response = await api.delete(`category/delete-data/${id}`);
+    return response.data;
 };

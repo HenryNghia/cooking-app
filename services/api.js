@@ -6,6 +6,8 @@ const api = axios.create({
 	baseURL: 'http://192.168.2.11:8000/api/', // Đổi thành API của bạn
 	headers: {
 		'Content-Type': 'application/json',
+		'Content-Type': 'multipart/form-data',
+		'Accept': 'application/json',
 	},
 });
 

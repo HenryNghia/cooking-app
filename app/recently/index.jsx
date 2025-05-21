@@ -1,115 +1,173 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image } from 'react-native'
-import React from 'react'
-import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen'
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { useEffect, useState } from "react";
 import { getRecipeByTime } from '../../services/recipeService';
 import { router } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { addFavorite, checkFavorite } from '../../services/favoriteService';
+
 export default function index() {
     const [recipes, setRecipes] = useState([]);
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setMessage('Đang tải công thức...');
+        setLoading(true);
         FetchRecipe();
     }, []);
 
     const FetchRecipe = async () => {
         try {
-            const data = await getRecipeByTime();
-            if (data.status == 200) {
-                setRecipes(data.data);
+            const recipeResponse = await getRecipeByTime();
+
+            if (recipeResponse.status === 200 && recipeResponse.data) {
+                const fetchedRecipes = recipeResponse.data;
+
+                const favoriteCheckPromises = fetchedRecipes.map(recipe =>
+                    checkFavorite({ recipe_id: recipe.id })
+                        .catch(error => {
+                            console.error(`Failed to check favorite status for recipe ${recipe.id}:`, error);
+                            return { recipeId: recipe.id, status: 500 };
+                        })
+                );
+
+                const checkResults = await Promise.all(favoriteCheckPromises);
+
+                const recipesWithFavStatus = fetchedRecipes.map((recipe, index) => {
+                    const checkResult = checkResults[index];
+                    return {
+                        ...recipe,
+                        isFavorite: checkResult?.status === 200
+                    };
+                });
+
+                setRecipes(recipesWithFavStatus);
+                setMessage('');
             } else {
-                setMessage(data.message || 'No recipes found.');
+                setMessage(recipeResponse.message || 'Không tìm thấy công thức.');
                 setRecipes([]);
             }
         } catch (error) {
-            console.error('Failed to fetch recipes:', error);
-            setMessage('Failed to fetch recipes.');
+            console.error('Failed to fetch recipes or check favorites:', error);
+            setMessage('Lỗi khi tải công thức hoặc kiểm tra trạng thái yêu thích.');
             setRecipes([]);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Star rendering function
     const renderStars = (rating) => {
         const stars = [];
-        const fullStars = Math.floor(rating);
-        const decimalPart = rating % 1;
+        const roundedRating = Math.round(rating * 2) / 2;
+        const fullRoundedStars = Math.floor(roundedRating);
+        const hasHalfStar = roundedRating % 1 !== 0;
 
-        for (let i = 1; i <= fullStars; i++) {
+        for (let i = 0; i < fullRoundedStars; i++) {
             stars.push(<Icon key={`full-${i}`} name="star" size={16} color="#FFA500" style={styles.star} />);
         }
-        if (decimalPart > 0) {
-            if (decimalPart <= 0.2) {
-                stars.push(<Icon key="empty-after" name="star-o" size={16} color="#FFA500" style={styles.star} />);
-            } else if (decimalPart <= 0.7) {
-                stars.push(<Icon key="half" name="star-half-full" size={16} color="#FFA500" style={styles.star} />);
-            } else {
-                stars.push(<Icon key="almost-full" name="star" size={16} color="#FFA500" style={styles.star} />);
-            }
+        if (hasHalfStar) {
+            stars.push(<Icon key="half" name="star-half-full" size={16} color="#FFA500" style={styles.star} />);
         }
-        const totalStarsInArray = stars.length;
-        for (let i = totalStarsInArray; i < 5; i++) {
+        const remainingStars = 5 - stars.length;
+        for (let i = 0; i < remainingStars; i++) {
             stars.push(<Icon key={`empty-${i}`} name="star-o" size={16} color="#FFA500" style={styles.star} />);
         }
         return stars;
     };
 
+    const handleFavorite = async (recipeId) => {
+        try {
+            console.log("Attempting to add recipe to favorites:", recipeId);
+            const response = await addFavorite({ recipe_id: recipeId });
+
+            if (response && response.status === 200) {
+                console.log('Thêm thành công:', response.message);
+                Alert.alert('Thành công', response.message || 'Đã thêm vào yêu thích!');
+                setRecipes(prevRecipes =>
+                    prevRecipes.map(recipe =>
+                        recipe.id === recipeId ? { ...recipe, isFavorite: true } : recipe
+                    )
+                );
+            } else {
+                console.log('Thêm thất bại:', response.message);
+                Alert.alert('Thất bại', response.message || 'Không thể thêm vào yêu thích.');
+            }
+        } catch (error) {
+            console.error('Lỗi khi thêm:', error);
+            Alert.alert('Lỗi', 'Lỗi khi kết nối để thêm yêu thích.');
+        }
+    };
+
     return (
         <ScrollView style={styles.scrollViewContainer} contentContainerStyle={styles.scrollViewContent}>
             <View style={styles.container}>
-                <View style={styles.header}>
+                 <View style={styles.header}>
                     <Text style={styles.heading}>Danh sách</Text>
-                </View>
+                 </View>
                 <View style={styles.listContent}>
-                    {recipes.length > 0 ? (
-                        recipes.map((item) => (
-                            <TouchableOpacity
-                                onPress={() => router.push({
-                                    pathname: '/recipe-detail/[id]',
-                                    params: { id: item.id }
-                                })}
-                                key={item.id}
-                                style={styles.cardWrapper}
-                            >
-                                <View style={styles.container_card}>
-                                    <TouchableOpacity
-                                        style={styles.heartIcon}
-                                        onPress={(e) => {
-                                            e.stopPropagation(); // Ngăn sự kiện nổi bọt lên TouchableOpacity cha
-                                            handleFavorite(item.id);
-                                        }}
-                                    >
-                                        <Icon
-                                            // name={favoriteList.includes(item.id) ? "heart" : "heart-o"}
-                                            name={"heart-o"}
-                                            size={22}
-                                            color="#FFA500"
-                                        />
-                                    </TouchableOpacity>
-
-                                    <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
-
-                                    <View style={styles.contentContainer}>
-                                        <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-                                        <View style={styles.ratingContainer}>
-                                            {renderStars(item.rating)}
-                                        </View>
-                                        <Text style={styles.chef} numberOfLines={1}>{item.name}</Text>
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        ))
+                    {loading ? (
+                         <View style={styles.messageContainer}>
+                            <ActivityIndicator size="large" color="#FFA500" />
+                            <Text style={styles.messageText}>
+                                {message}
+                            </Text>
+                         </View>
                     ) : (
-                        <Text style={styles.messageText}>{message || 'Đang tải công thức...'}</Text>
+                        recipes && recipes.length > 0 ? (
+                            recipes.map((item) => (
+                                <TouchableOpacity
+                                    onPress={() => router.push({
+                                        pathname: '/recipe-detail/[id]',
+                                        params: { id: item.id }
+                                    })}
+                                    key={item.id}
+                                    style={styles.cardWrapper}
+                                >
+                                    <View style={styles.container_card}>
+                                        <TouchableOpacity
+                                            style={styles.heartIcon}
+                                            onPress={(e) => {
+                                                e.stopPropagation();
+                                                handleFavorite(item.id);
+                                            }}
+                                        >
+                                            <Icon
+                                                name={item.isFavorite ? "bookmark" : "bookmark-o"}
+                                                size={22}
+                                                color="#FFF"
+                                            />
+                                        </TouchableOpacity>
+
+                                        <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
+
+                                        <View style={styles.contentContainer}>
+                                            <Text style={styles.title} numberOfLines={1}>
+                                                {item.title}
+                                            </Text>
+                                            <View style={styles.ratingContainer}>
+                                                {renderStars(item.rating)}
+                                            </View>
+                                            <Text style={styles.chef} numberOfLines={1}>
+                                                {item.name}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        ) : (
+                             <View style={styles.messageContainer}>
+                                <Text style={styles.messageText}>
+                                    {message || 'Không có công thức nào được tìm thấy.'}
+                                </Text>
+                            </View>
+                        )
                     )}
                 </View>
-                {/* Hiển thị message lỗi chung nếu có và không có recipes */}
-                {recipes.length === 0 && message && message !== 'Đang tải công thức...' && (
-                    <Text style={[styles.messageText, { marginTop: 10 }]}>{message}</Text>
-                )}
             </View>
         </ScrollView>
-    )
+    );
 }
 
 const styles = StyleSheet.create({
@@ -162,6 +220,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
+    messageContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20,
+        width: '100%',
+        height: hp(20),
+    },
+    messageText: {
+        color: '#FFFFFF',
+        textAlign: 'center',
+        fontSize: hp(2),
+    },
     heartIcon: {
         position: 'absolute',
         top: hp(1.5),
@@ -199,17 +270,5 @@ const styles = StyleSheet.create({
         color: '#B0B0B0',
         fontSize: hp(1.6),
         fontStyle: 'italic',
-    },
-    messageContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 20,
-        width: '100%',
-    },
-    messageText: {
-        color: '#FFFFFF',
-        textAlign: 'center',
-        fontSize: hp(2),
     },
 });

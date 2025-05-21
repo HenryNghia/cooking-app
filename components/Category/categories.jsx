@@ -33,9 +33,9 @@ export default function category() {
         <View style={styles.wrapper}>
             <View style={styles.header}>
                 <Text style={styles.heading}>Danh mục</Text>
-                <TouchableOpacity onPress={() => alert('Navigate to See More!')}>
+                {/* <TouchableOpacity onPress={() => alert('Navigate to See More!')}>
                     <Text style={styles.seeMore}>See More &gt;</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
 
             <Animated.View
@@ -51,7 +51,7 @@ export default function category() {
                             onPress={() => router.push(
                                 {
                                     pathname: '/category/category',
-                                    params: { 
+                                    params: {
                                         id: cat.id,
                                         name_category: cat.name_category,
                                     }
@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'center',
+        justifyContent: 'space-evenly',
     },
     button: {
         marginHorizontal: 4,

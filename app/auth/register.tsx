@@ -71,13 +71,14 @@ const RegisterScreen = () => {
                     <Text style={styles.appName}>NGHIA RECIPE</Text>
                     <Text style={styles.tagline}>Cook in easy way</Text>
                 </View>
+                <View>
+                    <Text style={styles.title}>Register</Text>
+                </View>
 
-                <Text style={styles.title}>Register</Text>
 
                 {/* Input Fields */}
                 <View style={styles.inputContainer}>
                     <View style={styles.inputRow}>
-                        {/* <Icon name="account-outline" size={22} color="#FFF" style={styles.icon} /> */}
                         <MaterialCommunityIcons name="account-outline" size={22} color="#FFF" style={styles.icon} />
                         <TextInput
                             style={styles.input}
@@ -89,7 +90,6 @@ const RegisterScreen = () => {
                         />
                     </View>
                     <View style={styles.inputRow}>
-                        {/* <Icon name="email-outline" size={22} color="#FFF" style={styles.icon} /> */}
                         <MaterialCommunityIcons name="email-outline" size={22} color="#FFF" style={styles.icon} />
                         <TextInput
                             style={styles.input}
@@ -103,7 +103,6 @@ const RegisterScreen = () => {
                         />
                     </View>
                     <View style={styles.inputRow}>
-                        {/* <Icon name="key-variant" size={22} color="#FFF" style={styles.icon} /> */}
                         <MaterialCommunityIcons name="key-variant" size={22} color="#FFF" style={styles.icon} />
                         <TextInput
                             style={styles.input}
@@ -115,12 +114,10 @@ const RegisterScreen = () => {
 
                         />
                         <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                            {/* <Icon name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#FFF" /> */}
                             <MaterialCommunityIcons name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} size={24} color="#FFF" />
                         </TouchableOpacity>
                     </View>
                     <View style={styles.inputRow}>
-                        {/* <Icon name="key-variant" size={22} color="#FFF" style={styles.icon} /> */}
                         <MaterialCommunityIcons name="key-variant" size={22} color="#FFF" style={styles.icon} />
                         <TextInput
                             style={styles.input}
@@ -131,7 +128,6 @@ const RegisterScreen = () => {
                             secureTextEntry={!isConfirmPasswordVisible}
                         />
                         <TouchableOpacity onPress={() => setIsConfirmPasswordVisible(!isConfirmPasswordVisible)}>
-                            {/* <Icon name={isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={22} color="#FFF" /> */}
                             <MaterialCommunityIcons name={isConfirmPasswordVisible ? "eye-off-outline" : "eye-outline"} size={24} color="#FFF" />
                         </TouchableOpacity>
                     </View>
@@ -140,11 +136,9 @@ const RegisterScreen = () => {
                 {/* Social Icons */}
                 <View style={styles.socialContainer}>
                     <TouchableOpacity onPress={handleGoogleRegister} style={styles.socialButton}>
-                        {/* <Icon name="google" size={25} color="#DB4437" /> */}
                         <MaterialCommunityIcons name="google" size={30} color="#DB4437" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleFacebookRegister} style={styles.socialButton}>
-                        {/* <Icon name="facebook" size={25} color="#4267B2" /> */}
                         <MaterialCommunityIcons name="facebook" size={30} color="#4267B2" />
                     </TouchableOpacity>
                 </View>
@@ -158,7 +152,7 @@ const RegisterScreen = () => {
                 <View style={styles.bottomTextContainer}>
                     <Text style={styles.bottomText}>Already Registered? </Text>
                     <TouchableOpacity
-                        onPress={handelLinkLogin}> {/* Điều hướng sang Login */}
+                        onPress={handelLinkLogin}>
                         <Text style={[styles.bottomText, styles.linkText]}>Login Now</Text>
                     </TouchableOpacity>
                 </View>
@@ -224,7 +218,7 @@ const styles = StyleSheet.create({
     },
     input: {
         flex: 1,
-        height: 40, // Adjust height if needed
+        height: 40,
         fontSize: 16,
         color: "#FFF"
     },
@@ -233,7 +227,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     forgotPasswordText: {
-        color: '#FF9800', // Orange color
+        color: '#FF9800',
         fontSize: 14,
     },
     socialContainer: {
@@ -243,17 +237,12 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     socialButton: {
-        // Style for social buttons (e.g., background, padding) if needed
         marginHorizontal: 15,
-        // Add background circle if desired:
-        // backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        // padding: 10,
-        // borderRadius: 25,
     },
     mainButtonOrange: {
-        backgroundColor: '#FF9800', // Orange color
+        backgroundColor: '#FF9800',
         paddingVertical: 15,
-        borderRadius: 30, // Rounded corners
+        borderRadius: 30,
         alignItems: 'center',
         width: '100%',
         marginBottom: 20,
@@ -264,34 +253,34 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
     },
     mainButtonOutline: {
-        borderColor: '#FFF', // White border
+        borderColor: '#FFF',
         borderWidth: 1.5,
-        paddingVertical: 14, // Slightly less padding because of border
+        paddingVertical: 14,
         borderRadius: 30,
         alignItems: 'center',
         width: '100%',
         marginBottom: 20,
-        backgroundColor: 'transparent', // Transparent background
+        backgroundColor: 'transparent',
     },
     mainButtonText: {
-        color: '#FFF', // White text
+        color: '#FFF',
         fontSize: 16,
         fontWeight: 'bold',
     },
     mainButtonTextOutline: {
-        color: '#FFF', // White text for outline button too
+        color: '#FFF',
     },
     bottomTextContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 15, // Space above bottom text
+        marginTop: 15,
     },
     bottomText: {
         color: 'rgba(255, 255, 255, 0.8)',
         fontSize: 14,
     },
     linkText: {
-        color: '#FF9800', // Orange color for the link part
+        color: '#FF9800',
         fontWeight: 'bold',
     },
 });

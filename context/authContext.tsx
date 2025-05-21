@@ -77,8 +77,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const userData = await getDataUser();
             setUser(userData.user);
         } catch (error) {
-            console.error('Login error:', error);
-            throw error;
         } finally {
             setIsLoading(false);
         }
@@ -89,7 +87,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setIsLoading(true);
             await logoutService();
         } catch (error) {
-            console.error('Logout error:', error);
         } finally {
             await AsyncStorage.removeItem('token');
             setIsAuthenticated(false);

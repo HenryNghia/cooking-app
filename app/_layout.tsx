@@ -61,10 +61,28 @@ export default function RootLayout() {
                         headerTitle: 'Gợi ý cho bạn',
                     }}
                 />
-                  <Stack.Screen
+                <Stack.Screen
                     name="recently/index"
                     options={{
                         headerTitle: 'Mới đăng gần đây',
+                    }}
+                />
+                <Stack.Screen
+                    name="recipe-user/index"
+                    options={{
+                        headerTitle: 'công thức của tôi',
+                    }}
+                />
+                <Stack.Screen
+                    name="update-recipe/[id]"
+                    options={{
+                        headerTitle: 'cập nhật công thức',
+                    }}
+                />
+                <Stack.Screen
+                    name="change-profile/index"
+                    options={{
+                        headerTitle: 'Chỉnh sửa hồ sơ cá nhân',
                     }}
                 />
             </Stack>

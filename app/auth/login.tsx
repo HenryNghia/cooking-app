@@ -24,7 +24,6 @@ const LoginScreen = () => {
             await login(email, password);
             router.replace('/(tabs)/home');
         } catch (error) {
-            console.error('Login error:', error);
             Alert.alert(
                 'Đăng nhập thất bại',
             );
@@ -133,8 +132,7 @@ const LoginScreen = () => {
                 {/* Navigation Link */}
                 <View style={styles.bottomTextContainer}>
                     <Text style={styles.bottomText}>Not Registered Yet? </Text>
-                    <TouchableOpacity
-                        onPress={handleLinkregister}> {/* Điều hướng sang Register */}
+                    <TouchableOpacity onPress={handleLinkregister}>
                         <Text style={[styles.bottomText, styles.linkText]}>Register Now</Text>
                     </TouchableOpacity>
                 </View>
@@ -155,7 +153,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 30,
-        paddingBottom: 20, 
+        paddingBottom: 20,
     },
     loadingContainer: {
         flex: 1,
@@ -169,12 +167,12 @@ const styles = StyleSheet.create({
     },
     logoContainer: {
         alignItems: 'center',
-        marginBottom: 20, 
-        marginTop: 40, 
+        marginBottom: 20,
+        marginTop: 40,
     },
     logo: {
-        width: 100, 
-        height: 100, 
+        width: 100,
+        height: 100,
         marginBottom: 10,
     },
     appName: {
@@ -190,12 +188,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#4CAF50', 
+        color: '#4CAF50',
         marginBottom: 30,
         textAlign: 'center'
     },
     inputContainer: {
-        width: '100%', 
+        width: '100%',
         marginBottom: 15,
     },
     inputRow: {
@@ -204,14 +202,14 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(255, 255, 255, 0.5)',
         marginBottom: 20,
-        paddingBottom: 5, 
+        paddingBottom: 5,
     },
     icon: {
         marginRight: 10,
     },
     input: {
         flex: 1,
-        height: 40, 
+        height: 40,
         fontSize: 16,
         color: "#FFF"
 
@@ -221,7 +219,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     forgotPasswordText: {
-        color: '#FF9800', 
+        color: '#FF9800',
     },
     socialContainer: {
         flexDirection: 'row',
@@ -230,19 +228,19 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     socialButton: {
-        
+
         marginHorizontal: 15,
-        
+
     },
     mainButtonOrange: {
         backgroundColor: '#FF9800',
         paddingVertical: 15,
-        borderRadius: 30, 
+        borderRadius: 30,
         alignItems: 'center',
         width: '100%',
         marginBottom: 20,
-        elevation: 3, 
-        shadowColor: '#000', 
+        elevation: 3,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
@@ -250,12 +248,12 @@ const styles = StyleSheet.create({
     mainButtonOutline: {
         borderColor: '#FFF',
         borderWidth: 1.5,
-        paddingVertical: 14, 
+        paddingVertical: 14,
         borderRadius: 30,
         alignItems: 'center',
         width: '100%',
         marginBottom: 20,
-        backgroundColor: 'transparent', 
+        backgroundColor: 'transparent',
     },
     mainButtonText: {
         color: '#FFF',
@@ -280,6 +278,3 @@ const styles = StyleSheet.create({
     },
 });
 
-function login(token: any) {
-    throw new Error('Function not implemented.');
-}

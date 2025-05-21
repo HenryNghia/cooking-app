@@ -1,4 +1,3 @@
-// File: createrecipe.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -10,100 +9,151 @@ import {
     KeyboardAvoidingView,
     Platform,
     Alert,
-    Image
+    Image,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// ... (các import khác của bạn)
-import Animated, { FadeInDown } from 'react-native-reanimated'; 
-import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-// Import component con
-import CoverPhotoInput from './CoverPhotoInput'; 
-import IngredientItem from './IngredientItem';     
-import CookingStepItem from './CookingStepItem';  
-
-import { getAllCategories } from '../../services/categoryService';
-import { getAllLevel } from '../../services/levelService';     
-import { addRecipe } from '../../services/recipeService';     
-
-import { ChevronDownIcon, ChevronUpIcon, PlusCircleIcon, CameraIcon as HeroCameraIcon } from 'react-native-heroicons/outline'; // Ví dụ, đổi tên CameraIcon để tránh trùng
+import { CameraIcon, PlusCircleIcon } from 'react-native-heroicons/outline';
 import { TrashIcon } from 'react-native-heroicons/solid';
-import { useRouter } from 'expo-router'; 
+import { getAllCategories } from '../../services/categoryService';
+import { getAllLevel } from '../../services/levelService';
+import { getRecipeById, updateRecipe } from '../../services/recipeService';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
+import { useLocalSearchParams, router } from 'expo-router';
 
-export default function CreateRecipeScreen() {
-    const router = useRouter();
+import CoverPhotoInput from '../FormRecipe/CoverPhotoInput';
+import IngredientItem from '../FormRecipe/IngredientItem';
+import CookingStepItem from '../FormRecipe/CookingStepItem';
+
+import { ChevronDownIcon, ChevronUpIcon } from 'react-native-heroicons/outline';
+
+export default function UpdateRecipeScreen() {
+    const { id } = useLocalSearchParams();
+
+    const [loadingRecipe, setLoadingRecipe] = useState(true);
+    const [recipeError, setRecipeError] = useState(null);
+
     const [categories, setCategories] = useState([]);
-    const [message, setMessage] = useState('');
     const [level, setLevel] = useState([]);
-    const [coverPhoto, setCoverPhoto] = useState(null); // Sẽ lưu { uri, name, type }
+
+    const [coverPhotoUri, setCoverPhotoUri] = useState(null);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [cookingTime, setCookingTime] = useState('');
+
     const [selectedDifficulty, setSelectedDifficulty] = useState(null);
     const [isDifficultyPickerVisible, setIsDifficultyPickerVisible] = useState(false);
+
     const [selectedCategory, setSelectedCategory] = useState(null);
+
     const [ingredients, setIngredients] = useState([]);
     const [newIngredientName, setNewIngredientName] = useState('');
     const [newIngredientQty, setNewIngredientQty] = useState('');
+
     const [cookingSteps, setCookingSteps] = useState([]);
     const [newCookingSteps, setNewCookingSteps] = useState('');
+
     const scrollViewRef = useRef(null);
 
     useEffect(() => {
-        fetchCategories();
-        fetchLevel();
-    }, []);
+        fetchData();
+    }, [id]);
 
-    const fetchCategories = async () => {
+    const fetchData = async () => {
+        setLoadingRecipe(true);
+        setRecipeError(null);
+
         try {
-            const res = await getAllCategories();
-            if (res.status === 200 && res.data) {
-                setCategories(res.data);
+            const [categoriesRes, levelRes, recipeRes] = await Promise.all([
+                getAllCategories().catch(e => { console.error("Error fetching categories:", e); return { status: 500 }; }),
+                getAllLevel().catch(e => { console.error("Error fetching levels:", e); return { status: 500 }; }),
+                id ? getRecipeById(id).catch(e => { console.error("Error fetching recipe:", e); return { status: 500 }; }) : Promise.resolve({ status: 404 })
+            ]);
+
+            if (categoriesRes.status === 200 && categoriesRes.data) {
+                setCategories(categoriesRes.data);
             } else {
-                setMessage(res.message || 'Không thể tải danh sách danh mục.');
+                console.error("Failed to load categories:", categoriesRes.message);
                 setCategories([]);
             }
-        } catch (error) {
-            console.error('Error fetching categories:', error);
-            setMessage('Lỗi khi tải danh sách danh mục.');
-            setCategories([]);
-        }
-    };
 
-    const fetchLevel = async () => {
-        try {
-            const res = await getAllLevel();
-            if (res.status === 200 && res.data && res.data.length > 0) {
-                setLevel(res.data);
-                setSelectedDifficulty(res.data[0]);
+            if (levelRes.status === 200 && levelRes.data && levelRes.data.length > 0) {
+                setLevel(levelRes.data);
             } else {
-                setMessage(res.message || 'Không thể tải danh sách độ khó.');
+                console.error("Failed to load levels:", levelRes.message);
                 setLevel([]);
-                setSelectedDifficulty(null);
             }
+
+            if (id && recipeRes.status === 200 && recipeRes.data) {
+                const fetchedRecipe = recipeRes.data;
+                setCoverPhotoUri(fetchedRecipe.image);
+                setTitle(fetchedRecipe.title);
+                setDescription(fetchedRecipe.description);
+
+                // Assuming time_cook is like "30 phút"
+                const timeMatch = fetchedRecipe.time_cook ? fetchedRecipe.time_cook.match(/^(\d+)/) : null;
+                setCookingTime(timeMatch ? timeMatch[1] : '');
+
+                // Assuming ingredients are comma-separated "qty name"
+                if (fetchedRecipe.ingredients) {
+                    const parsedIngredients = fetchedRecipe.ingredients.split(', ').map((item, index) => {
+                        const parts = item.split(' ');
+                        const qty = parts.shift();
+                        const name = parts.join(' ');
+                        return { id: `${Date.now()}-${Math.random()}-${index}` + 'ing', name: name || '', qty: qty || '' };
+                    }).filter(item => item.name || item.qty); // Filter out empty items
+                    setIngredients(parsedIngredients);
+                } else {
+                    setIngredients([]);
+                }
+
+
+                // Assuming instructions are separated by '\\'
+                if (fetchedRecipe.instructions) {
+                    const parsedSteps = fetchedRecipe.instructions.split('\\').map((step, index) => ({
+                        id: `${Date.now()}-${Math.random()}-${index}` + 'step',
+                        description: step || ''
+                    })).filter(step => step.description); // Filter out empty steps
+                    setCookingSteps(parsedSteps);
+                } else {
+                    setCookingSteps([]);
+                }
+
+
+                // Set selected category and difficulty based on fetched IDs
+                if (categoriesRes.data) {
+                    setSelectedCategory(fetchedRecipe.id_category);
+                }
+                if (levelRes.data) {
+                    const matchedDifficulty = levelRes.data.find(lvl => lvl.id === fetchedRecipe.id_level);
+                    setSelectedDifficulty(matchedDifficulty || null);
+                }
+
+
+            } else if (id) {
+                setRecipeError(recipeRes.message || 'Không tìm thấy công thức cần cập nhật.');
+            } else {
+                setRecipeError('Không có ID công thức được cung cấp.');
+            }
+
         } catch (error) {
-            console.error('Error fetching levels:', error);
-            setMessage('Lỗi khi tải danh sách độ khó.');
-            setLevel([]);
-            setSelectedDifficulty(null);
+            console.error('Error fetching data:', error);
+            setRecipeError('Lỗi khi tải dữ liệu công thức và tùy chọn.');
+        } finally {
+            setLoadingRecipe(false);
         }
     };
-
-    // Hàm này nhận object { uri, name, type } từ CoverPhotoInput
-    const handlePhotoSelected = (photoData) => {
-        console.log("Photo data received in CreateRecipeScreen:", photoData);
-        // Kiểm tra xem photoData có phải là object và có thuộc tính uri không
-        if (photoData && typeof photoData === 'object' && photoData.hasOwnProperty('uri')) {
-            setCoverPhoto(photoData);
-        } else {
-            console.error("Invalid photoData received in CreateRecipeScreen:", photoData);
-            // Reset nếu dữ liệu không hợp lệ để tránh lỗi
-            setCoverPhoto(null);
-        }
+    const handlePhotoSelected = (uri) => {
+        setCoverPhotoUri(uri);
     };
-
 
     const handleCategoryPress = (categoryId) => {
-        setSelectedCategory(prev => (prev === categoryId ? null : categoryId));
+        if (selectedCategory === categoryId) {
+            setSelectedCategory(null);
+        } else {
+            setSelectedCategory(categoryId);
+        }
     };
 
     const handleAddIngredient = () => {
@@ -159,9 +209,14 @@ export default function CreateRecipeScreen() {
     };
 
 
-    const handleCreateRecipe = async () => {
-        if (!coverPhoto || !coverPhoto.uri || typeof coverPhoto.uri !== 'string') { // Thêm kiểm tra kiểu của uri
-            Alert.alert("Thiếu ảnh bìa", "Vui lòng thêm ảnh bìa hợp lệ cho công thức.");
+    const handleUpdateRecipe = async () => {
+        if (!id) {
+            Alert.alert("Lỗi", "Không có ID công thức để cập nhật.");
+            return;
+        }
+
+        if (!coverPhotoUri) {
+            Alert.alert("Thiếu ảnh bìa", "Vui lòng thêm ảnh bìa cho công thức.");
             return;
         }
         if (!title.trim()) {
@@ -172,19 +227,23 @@ export default function CreateRecipeScreen() {
             Alert.alert("Thiếu mô tả", "Vui lòng nhập mô tả công thức.");
             return;
         }
+
         const timeNum = parseInt(cookingTime, 10);
         if (isNaN(timeNum) || timeNum <= 0) {
             Alert.alert("Thời gian nấu không hợp lệ", "Vui lòng nhập thời gian nấu hợp lệ (lớn hơn 0).");
             return;
         }
+
         if (!selectedCategory) {
             Alert.alert("Thiếu danh mục", "Vui lòng chọn danh mục.");
             return;
         }
+
         if (!selectedDifficulty) {
             Alert.alert("Thiếu độ khó", "Vui lòng chọn độ khó cho công thức.");
             return;
         }
+
         if (ingredients.length === 0) {
             Alert.alert("Thiếu nguyên liệu", "Vui lòng thêm ít nhất một nguyên liệu.");
             return;
@@ -194,71 +253,42 @@ export default function CreateRecipeScreen() {
             return;
         }
 
-
         const ingredientsString = ingredients.map(item => `${item.qty} ${item.name}`).join(', ');
         const instructionsString = cookingSteps.map(step => step.description).join('\\');
 
-        const formData = new FormData();
-        formData.append('image', {
-            uri: Platform.OS === 'ios' ? coverPhoto.uri.replace('file://', '') : coverPhoto.uri,
-            name: coverPhoto.name,
-            type: coverPhoto.type,
-        });
-        formData.append('title', title.trim());
-        formData.append('description', description.trim());
-        formData.append('ingredients', ingredientsString);
-        formData.append('instructions', instructionsString);
-        formData.append('id_category', selectedCategory);
-        formData.append('id_level', selectedDifficulty.id);
-        formData.append('timecook', `${timeNum}`);
 
-        console.log("FormData entries prepared:");
-        for (let pair of formData.entries()) {
-            if (pair[0] === 'image') {
-                console.log(`${pair[0]}, URI: ${pair[1].uri}, Name: ${pair[1].name}, Type: ${pair[1].type}`);
-            } else {
-                console.log(`${pair[0]}, ${pair[1]}`);
-            }
-        }
+        const recipeData = {
+            id: id, // Include the recipe ID in the update data
+            image: coverPhotoUri,
+            title: title.trim(),
+            description: description.trim(),
+            ingredients: ingredientsString,
+            instructions: instructionsString,
+            id_category: selectedCategory,
+            id_level: selectedDifficulty.id,
+            time_cook: `${timeNum} phút`,
+        };
+
+        console.log("Updating Recipe Data:", recipeData);
 
         try {
-            const response = await addRecipe(formData); // Ensure addRecipe is correctly defined and imported
-            if (response.status === 200) {
-                Alert.alert("Thành công", response.message || "Công thức đã được tạo!");
-                resetForm();
-                router.push('/recipe-user'); // Ensure router is setup correctly
-            } else {
-                Alert.alert("Lỗi", response.message || "Đã xảy ra lỗi khi tạo công thức.");
-            }
-        } catch (error) {
-            console.error('Lỗi khi tạo công thức:', error);
-            let errorMessage = "Không thể kết nối đến máy chủ hoặc có lỗi xảy ra. Vui lòng thử lại.";
-            if (error.response && error.response.data && error.response.data.message) {
-                errorMessage = error.response.data.message;
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-            Alert.alert("Lỗi", errorMessage);
-        }
-    };
+            const response = await updateRecipe(id, recipeData); // Assuming updateRecipe takes id and data
 
-    const resetForm = () => {
-        setCoverPhoto(null);
-        setTitle('');
-        setDescription('');
-        setCookingTime('');
-        if (level && level.length > 0) {
-            setSelectedDifficulty(level[0]);
-        } else {
-            setSelectedDifficulty(null);
+            console.log('API Response:', response);
+
+            if (response.status === 200) {
+                Alert.alert("Thành công", response.message || "Công thức đã được cập nhật!");
+                // Optionally navigate back or to the updated recipe detail page
+                router.back(); // Example: Navigate back after successful update
+                // router.push(`/recipe-detail/${id}`); // Example: Navigate to detail page
+            } else {
+                Alert.alert("Lỗi", response.message || "Đã xảy ra lỗi khi cập nhật công thức.");
+            }
+
+        } catch (error) {
+            console.error('Lỗi khi cập nhật công thức:', error);
+            Alert.alert("Lỗi", "Không thể kết nối đến máy chủ hoặc có lỗi xảy ra. Vui lòng thử lại.");
         }
-        setIsDifficultyPickerVisible(false);
-        setSelectedCategory(null);
-        setIngredients([]);
-        setNewIngredientName('');
-        setNewIngredientQty('');
-        setCookingSteps([]);
-        setNewCookingSteps('');
     };
 
     const difficultyHeaderStyle = {
@@ -267,17 +297,33 @@ export default function CreateRecipeScreen() {
         borderBottomRightRadius: isDifficultyPickerVisible ? 0 : 8,
     };
 
-    // Biến để truyền vào prop uri của CoverPhotoInput một cách an toàn
-    // Nó sẽ là string (nếu coverPhoto.uri tồn tại và là string) hoặc null.
-    const uriForCoverPhotoInput = (coverPhoto && coverPhoto.uri && typeof coverPhoto.uri === 'string')
-        ? coverPhoto.uri
-        : null;
+
+    if (loadingRecipe) {
+        return (
+            <View style={styles.fullScreenMessageContainer}>
+                <ActivityIndicator size="large" color="#FFA500" />
+                <Text style={styles.fullScreenMessageText}>Đang tải công thức...</Text>
+            </View>
+        );
+    }
+
+    if (recipeError) {
+        return (
+            <View style={styles.fullScreenMessageContainer}>
+                <Text style={styles.fullScreenMessageText}>{recipeError}</Text>
+                {/* Add a retry button if needed */}
+                {/* <TouchableOpacity onPress={() => fetchData()} style={styles.retryButton}>
+                    <Text style={styles.retryButtonText}>Thử lại</Text>
+                </TouchableOpacity> */}
+            </View>
+        );
+    }
+
 
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // 'height' có thể tốt hơn cho Android
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <SafeAreaView style={styles.safeArea}>
                 <ScrollView
@@ -285,18 +331,12 @@ export default function CreateRecipeScreen() {
                     contentContainerStyle={styles.scrollViewContent}
                     showsVerticalScrollIndicator={false}
                     ref={scrollViewRef}
-                    keyboardShouldPersistTaps="handled"
                 >
-                    <Text style={styles.screenTitle}>Chi Tiết Công Thức</Text>
+                    <Text style={styles.screenTitle}>Cập Nhật Công Thức</Text>
 
                     <Text style={styles.sectionTitle}>Ảnh Bìa</Text>
-                    {/* Đảm bảo truyền đúng giá trị string hoặc null cho prop uri */}
-                    <CoverPhotoInput
-                        uri={uriForCoverPhotoInput}
-                        onPhotoSelected={handlePhotoSelected}
-                    />
+                    <CoverPhotoInput uri={coverPhotoUri} onPhotoSelected={handlePhotoSelected} />
 
-                    {/* Title Input */}
                     <Text style={styles.sectionTitle}>Tiêu đề</Text>
                     <TextInput
                         style={styles.input}
@@ -306,7 +346,6 @@ export default function CreateRecipeScreen() {
                         onChangeText={setTitle}
                     />
 
-                    {/* Description Input */}
                     <Text style={styles.sectionTitle}>Mô tả</Text>
                     <TextInput
                         style={styles.multilineInput}
@@ -318,7 +357,6 @@ export default function CreateRecipeScreen() {
                         minHeight={100}
                     />
 
-                    {/* Cooking Time and Servings */}
                     <View style={styles.rowContainer}>
                         <View style={{ flex: 1, marginRight: 10 }}>
                             <Text style={styles.sectionTitle}>Thời gian nấu (phút)</Text>
@@ -333,7 +371,6 @@ export default function CreateRecipeScreen() {
                         </View>
                     </View>
 
-                    {/* Difficulty Picker */}
                     <Text style={styles.sectionTitle}>Độ khó</Text>
                     <TouchableOpacity
                         style={[styles.difficultyHeader, difficultyHeaderStyle]}
@@ -361,6 +398,7 @@ export default function CreateRecipeScreen() {
                             {level.map((levelItem, index) => {
                                 const isCurrentSelectionInList = selectedDifficulty && levelItem.id === selectedDifficulty.id;
                                 const isLastItem = index === level.length - 1;
+
                                 return (
                                     <TouchableOpacity
                                         key={levelItem.id}
@@ -378,8 +416,6 @@ export default function CreateRecipeScreen() {
                         </View>
                     )}
 
-
-                    {/* Category Selector */}
                     <Text style={styles.sectionTitle}>Danh mục</Text>
                     {categories && categories.length > 0 ? (
                         <Animated.ScrollView
@@ -413,10 +449,11 @@ export default function CreateRecipeScreen() {
                             })}
                         </Animated.ScrollView>
                     ) : (
-                        <Text style={styles.infoText}>{message || 'Đang tải danh mục...'}</Text>
+                        <View style={styles.messageContainer}>
+                            <Text style={styles.messageText}>Đang tải danh mục...</Text>
+                        </View>
                     )}
 
-                    {/* Ingredients */}
                     <Text style={styles.sectionTitle}>Nguyên liệu</Text>
                     <View style={styles.itemsList}>
                         {ingredients.map(item => (
@@ -428,7 +465,6 @@ export default function CreateRecipeScreen() {
                         ))}
                     </View>
 
-                    {/* Add New Ingredient */}
                     <View style={styles.addNewItemContainer}>
                         <Text style={styles.addNewItemTitle}>Thêm nguyên liệu mới</Text>
                         <View style={styles.rowContainer}>
@@ -454,7 +490,6 @@ export default function CreateRecipeScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Cooking Steps */}
                     <Text style={styles.sectionTitle}>Các bước nấu</Text>
                     <View style={styles.itemsList}>
                         {cookingSteps.map((step, index) => (
@@ -467,7 +502,6 @@ export default function CreateRecipeScreen() {
                         ))}
                     </View>
 
-                    {/* Add New Step */}
                     <View style={styles.addNewItemContainer}>
                         <Text style={styles.addNewItemTitle}>Thêm bước nấu mới</Text>
                         <TextInput
@@ -486,12 +520,10 @@ export default function CreateRecipeScreen() {
                     </View>
 
 
-                    {/* Create Recipe Button */}
-                    <TouchableOpacity style={styles.createButton} onPress={handleCreateRecipe}>
-                        <Text style={styles.createButtonText}>Tạo Công Thức</Text>
+                    <TouchableOpacity style={styles.createButton} onPress={handleUpdateRecipe}>
+                        <Text style={styles.createButtonText}>Cập Nhật Công Thức</Text>
                     </TouchableOpacity>
 
-                    {/* Padding cuối ScrollView */}
                     <View style={{ height: 50 }} />
                 </ScrollView>
             </SafeAreaView>
@@ -506,56 +538,55 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-        paddingHorizontal: wp(5), // Sử dụng wp cho padding ngang
+        paddingHorizontal: 20,
 
     },
     scrollView: {
         flex: 1,
     },
     scrollViewContent: {
-        paddingTop: hp(2),    // Sử dụng hp cho padding top
-        paddingBottom: hp(10), // Sử dụng hp cho padding bottom
+        paddingTop: 20,
+        paddingBottom: 100,
 
     },
     screenTitle: {
-        fontSize: wp(6), // Responsive font size
+        fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: hp(2.5), // Responsive margin
+        marginBottom: 20,
+
         color: '#eee',
     },
     sectionTitle: {
-        fontSize: wp(4.5), // Responsive font size
+        fontSize: 16,
         fontWeight: '600',
-        marginTop: hp(2),    // Responsive margin
-        marginBottom: hp(1), // Responsive margin
+        marginTop: 15,
+        marginBottom: 8,
+
         color: '#eee',
     },
     rowContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: hp(1.5),
     },
     input: {
         backgroundColor: '#3a3a3a',
         borderRadius: 8,
-        paddingVertical: hp(1.5), // Responsive padding
-        paddingHorizontal: wp(3.5), // Responsive padding
-        fontSize: wp(4), // Responsive font size
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        fontSize: 16,
         color: '#eee',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 4,
-        // Thêm marginBottom cho input đơn lẻ để có khoảng cách
-        marginBottom: hp(1.5),
     },
     multilineInput: {
         backgroundColor: '#3a3a3a',
         borderRadius: 8,
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(3.5),
-        fontSize: wp(4),
+        paddingVertical: 12,
+        paddingHorizontal: 15,
+        fontSize: 16,
         color: '#eee',
         textAlignVertical: 'top',
         shadowColor: '#000',
@@ -563,22 +594,19 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 3,
         elevation: 4,
-        marginBottom: hp(1.5), // Đảm bảo có khoảng cách dưới
-        // minHeight đã được set trong props, không cần ở đây
     },
     infoText: {
-        fontSize: wp(3.5),
+        fontSize: 14,
         color: '#999',
         textAlign: 'center',
-        marginTop: hp(1),
-        marginBottom: hp(1.5),
+        marginTop: 10,
     },
     difficultyHeader: {
         backgroundColor: '#3a3a3a',
         borderTopLeftRadius: 8,
         borderTopRightRadius: 8,
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(3.5),
+        paddingVertical: 12,
+        paddingHorizontal: 15,
         flexDirection: 'row',
         alignItems: 'center',
         shadowColor: '#000',
@@ -587,7 +615,6 @@ const styles = StyleSheet.create({
         shadowRadius: 3,
         elevation: 4,
         zIndex: 1,
-        // marginBottom được quản lý bởi difficultyHeaderStyle
     },
     difficultyHeaderInner: {
         flexDirection: 'row',
@@ -600,29 +627,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     difficultyHeaderText: {
-        fontSize: wp(4),
+        fontSize: 16,
         color: '#eee',
     },
     difficultyOptionsContainer: {
         backgroundColor: '#3a3a3a',
-        borderBottomLeftRadius: 8,
-        borderBottomRightRadius: 8,
-        // marginTop: 0, // Không cần nếu header không có border bottom khi mở
-        paddingHorizontal: 0, // Để item tự padding
+        borderRadius: 8,
+        marginTop: 6,
+        paddingHorizontal: 15,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 5,
         elevation: 6,
         zIndex: 0,
-        marginBottom: hp(2), // Khoảng cách sau picker
+        marginBottom: 15,
         overflow: 'hidden',
     },
     difficultyOptionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: hp(1.5),
-        paddingHorizontal: wp(3.5), // Padding cho text bên trong
+        paddingVertical: 12,
+        borderRadius: 8,
     },
     difficultyOptionItemBorder: {
         borderBottomWidth: 1,
@@ -632,41 +658,42 @@ const styles = StyleSheet.create({
         backgroundColor: '#4a4a4a',
     },
     difficultyOptionText: {
-        fontSize: wp(4),
+        fontSize: 16,
         color: '#eee',
     },
-    // difficultyIndicator: { // Không dùng
-    //     width: 10,
-    //     height: 10,
-    //     borderRadius: 5,
-    //     marginRight: 10,
-    // },
+    difficultyIndicator: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 10,
+    },
 
     categoryScrollView: {
-        marginBottom: hp(2),
+        marginBottom: 15,
     },
     horizontalList: {
-        paddingHorizontal: wp(0.5), // Giảm padding để nhiều item hơn
+        paddingHorizontal: 6,
         flexDirection: 'row',
     },
     categoryButton: {
-        marginHorizontal: wp(1), // Responsive margin
-        width: hp(10), // Giữ nguyên theo chiều cao màn hình
+        marginHorizontal: 4,
+        width: hp(10),
         alignItems: 'center',
-        padding: wp(1), // Responsive padding
+        padding: 5,
     },
     categoryimageContainer: {
         alignItems: 'center',
     },
     categoryitem: {
-        padding: wp(1.5), // Responsive padding
-        borderRadius: hp(5), // Nửa của hp(10) để tạo hình tròn hoàn hảo
+        padding: 6,
+        borderRadius: hp(999),
     },
     categoryimage: {
-        width: hp(8),   // Kích thước ảnh
-        height: hp(8),  // Kích thước ảnh
-        borderRadius: hp(4), // Nửa kích thước ảnh để tròn
-        // resizeMode: 'cover' đã có trong props
+        width: hp(8),
+        height: hp(8),
+        alignItems: 'center',
+        borderRadius: 999,
+        objectFit: 'cover'
     },
     categoryactive: {
         backgroundColor: 'rgba(251, 191, 36, 1)',
@@ -679,31 +706,32 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         textTransform: 'capitalize',
         fontWeight: 'normal',
-        fontSize: wp(3), // Responsive font size
-        marginTop: hp(0.5),
-        // minWidth không cần thiết, để text tự điều chỉnh
+        minWidth: 80,
+        fontSize: 12,
+        marginTop: 4,
     },
     itemsList: {
-        marginBottom: hp(2),
+        marginBottom: 15,
     },
     addNewItemContainer: {
-        marginBottom: hp(2.5), // Tăng khoảng cách dưới
+        marginTop: 15,
+        marginBottom: 15,
     },
-    addNewItemTitle: { // Giống sectionTitle
-        fontSize: wp(4.5),
+    addNewItemTitle: {
+        fontSize: 16,
         fontWeight: '600',
-        marginBottom: hp(1),
+        marginBottom: 8,
         color: '#eee',
     },
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#555',
+        backgroundColor: '#888',
         borderRadius: 8,
-        paddingVertical: hp(1.8), // Responsive padding
-        paddingHorizontal: wp(4.5),// Responsive padding
+        paddingVertical: 14,
+        paddingHorizontal: 20,
         justifyContent: 'center',
-        marginTop: hp(1.2),
+        marginTop: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -712,9 +740,9 @@ const styles = StyleSheet.create({
     },
     addButtonText: {
         color: 'white',
-        fontSize: wp(4), // Responsive font size
+        fontSize: 16,
         fontWeight: 'bold',
-        marginLeft: wp(1.5), // Responsive margin
+        marginLeft: 5,
     },
     addStepButton: {
         backgroundColor: '#FF7043',
@@ -722,9 +750,9 @@ const styles = StyleSheet.create({
     createButton: {
         backgroundColor: '#FF7043',
         borderRadius: 8,
-        paddingVertical: hp(2), // Responsive padding
+        paddingVertical: 16,
         alignItems: 'center',
-        marginTop: hp(3.5), // Khoảng cách trên nút tạo
+        marginTop: 30,
         shadowColor: '#FF7043',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -733,7 +761,20 @@ const styles = StyleSheet.create({
     },
     createButtonText: {
         color: 'white',
-        fontSize: wp(4.5), // Responsive font size
+        fontSize: 18,
         fontWeight: 'bold',
     },
+    fullScreenMessageContainer: {
+        flex: 1,
+        backgroundColor: '#1e1e1e',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    fullScreenMessageText: {
+        fontSize: 18,
+        color: '#eee',
+        textAlign: 'center',
+        marginTop: 10,
+    }
 });

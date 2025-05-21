@@ -54,8 +54,8 @@ const styles = StyleSheet.create({
   },
   stepText: {
     fontFamily: 'outfit',
-    fontSize: 17,
+    fontSize: 19,
     marginTop: 10,
-      color: color.greytext,
+    color: color.greytext,
   },
 });

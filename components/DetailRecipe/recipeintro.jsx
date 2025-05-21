@@ -1,144 +1,258 @@
-import { StyleSheet, View, Text, Image, TouchableOpacity } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import color from '../../constants/color'
+import { StyleSheet, View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import color from '../../constants/color';
 import Ionicons from '@expo/vector-icons/Ionicons';
-export default function recipeintro({recipe}) {
-    if (!recipe) return null;
+import { addFavorite, deleteFavorite, checkFavorite } from '../../services/favoriteService';
+
+export default function Recipeintro({ recipe }) {
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isLoadingFavorite, setIsLoadingFavorite] = useState(true);
+
+    const formatText = (value) => {
+        if (value === null || typeof value === 'undefined') {
+            return '';
+        }
+        return String(value);
+    };
+
+    const checkInitialStatus = useCallback(async () => {
+        if (!recipe?.id) {
+            setIsLoadingFavorite(false);
+            return;
+        }
+        setIsLoadingFavorite(true);
+        try {
+            const response = await checkFavorite({ recipe_id: recipe.id });
+            setIsFavorite(response.status === 200);
+        } catch (error) {
+            console.error('Error checking favorite status:', error);
+            setIsFavorite(false);
+        } finally {
+            setIsLoadingFavorite(false);
+        }
+    }, [recipe?.id]);
+
+    useEffect(() => {
+        checkInitialStatus();
+    }, [checkInitialStatus]);
+
+    const handleToggleFavorite = useCallback(async () => {
+        if (!recipe?.id || isLoadingFavorite) {
+            return;
+        }
+
+        const currentFavoriteStatus = isFavorite;
+        setIsFavorite(!currentFavoriteStatus);
+
+        try {
+            let response;
+            if (currentFavoriteStatus) {
+                response = await deleteFavorite(recipe.id);
+            } else {
+                const data = { recipe_id: recipe.id };
+                response = await addFavorite(data);
+            }
+
+            if (response && response.status === 200) {
+                Alert.alert('Thành công', formatText(response.message) || (currentFavoriteStatus ? 'Đã xóa khỏi yêu thích!' : 'Đã thêm vào yêu thích!'));
+            } else {
+                Alert.alert('Thất bại', formatText(response?.message) || 'Có lỗi xảy ra!');
+                setIsFavorite(currentFavoriteStatus);
+            }
+        } catch (error) {
+            Alert.alert('Lỗi', 'Lỗi kết nối hoặc server.');
+            setIsFavorite(currentFavoriteStatus);
+        }
+    }, [isFavorite, recipe?.id, isLoadingFavorite]);
+
+    // 👇 Gom các điều kiện render về một chỗ
+    if (!recipe || !recipe.id) {
+        return (
+            <View style={styles.container}>
+                <Text style={styles.loadingText}>Không có dữ liệu công thức.</Text>
+            </View>
+        );
+    }
 
     return (
-        <View>
-            <Image source={{ uri: recipe.image }}
-                style={{ height: 250, width: '100%', objectFit: 'cover', borderRadius: 20, }}
-            />
-            <View style={{
-                justifyContent: 'space-between',
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-            }}>
-                <Text
-                    style={{
-                        fontSize: 25,
-                        fontFamily: 'outfit',
-                        marginTop: 7,
-                        padding: 10,
-                        textTransform: 'capitalize',
-                        color: '#FFF',
-                    }}
-                >{recipe.title}</Text>
-                < TouchableOpacity
-                    style={{
-                        paddingTop: 10,
-                    }}>
-                    <Ionicons name="bookmark-outline" size={24} onPress={() => alert('Navigate to See More!')} color="#FFF" style={{
-                        padding: 10,
-                    }}></Ionicons>
-                </TouchableOpacity>
-            </View>
-
-
-            <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 5,
-            }}>
-                <Image source={{ uri: recipe.avatar }} style={{
-                    width: 20,
-                    height: 20,
-                    padding: 20,
-                    borderRadius: 999,
-                    backgroundColor: 'black',
-                    marginRight: 10
-                }} />
-                <Text
-                    style={{
-                        fontSize: 17,
-                        fontFamily: 'outfit',
-                        marginTop: 7,
-                        color: '#FFF',
-                    }}>{recipe.name}</Text>
-            </View>
-
-            <Text
-                style={{
-                    fontSize: 20,
-                    fontFamily: 'outfit-bold',
-                    marginTop: 10,
-                    color: 'orange',
-                }}>Mô tả</Text>
-
-            {recipe.description.map((item, index) => (
-                <View key={index}>
-                    <Text
-                        style={{
-                            fontSize: 17,
-                            fontFamily: 'outfit',
-                            marginTop: 3,
-                            color: color.greytext,
-                        }}>{item}</Text>
-                </View>
-            ))}
-
-            <View style={{
-                marginTop: 15,
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'space-around'
-            }}>
-                {/* độ khó công thức */}
-                <View style={styles.featureContainer}>
-                    <Ionicons name="leaf" size={18} color="green" />
-                    <View>
-                        <Text style={{  color: '#FFF',}}>Mức độ</Text>
-                        <Text style={{
-                            fontFamily: 'outfit',
-                            fontSize: 18,
-                            color: 'green',
-                            textTransform: 'capitalize'
-                        }}>{recipe.name_level}</Text>
+        <View style={styles.container}>
+            {isLoadingFavorite ? (
+                <Text style={styles.loadingText}>Đang tải thông tin yêu thích...</Text>
+            ) : (
+                <>
+                    <Image source={{ uri: recipe.image }} style={styles.recipeImage} />
+                    <View style={styles.header}>
+                        <Text style={styles.title}>{formatText(recipe.title)}</Text>
+                        <TouchableOpacity
+                            style={styles.bookmarkIconContainer}
+                            onPress={handleToggleFavorite}
+                            disabled={isLoadingFavorite}
+                        >
+                            <Ionicons
+                                name={isFavorite ? "bookmark" : "bookmark-outline"}
+                                size={28}
+                                color="#FFF"
+                            />
+                        </TouchableOpacity>
                     </View>
-                </View>
 
-                {/* thời gian thực hiện */}
-                <View style={styles.featureContainer}>
-                    <Ionicons name="timer" size={24} color="green" />
-                    <View>
-                        <Text style={{  color: '#FFF',}}>Thời gian</Text>
-                        <Text style={{
-                            fontFamily: 'outfit',
-                            fontSize: 18,
-                            color: 'green',
-                            textTransform: 'capitalize'
-                        }}>{recipe.timecook}</Text>
+                    <View style={styles.chefContainer}>
+                        <Image source={{ uri: recipe.avatar }} style={styles.chefAvatar} />
+                        <Text style={styles.chefName}>{formatText(recipe.name)}</Text>
                     </View>
-                </View>
 
-                {/* danh mục thuộc về món ăn  */}
-                <View style={styles.featureContainer}>
-                    <Ionicons name="bonfire" size={24} color="orange" />
-                    <View>
-                        <Text style={{  color: '#FFF',}}>Danh mục</Text>
-                        <Text style={{
-                            fontFamily: 'outfit',
-                            fontSize: 18,
-                            color: 'green',
-                            textTransform: 'capitalize'
-                        }}>{recipe.name_category}</Text>
+                    <Text style={styles.descriptionHeading}>Mô tả</Text>
+
+                    {Array.isArray(recipe.description) && recipe.description.length > 0 ? (
+                        recipe.description.map((item, index) => (
+                            <View key={index}>
+                                <Text style={styles.descriptionText}>{formatText(item)}</Text>
+                            </View>
+                        ))
+                    ) : !Array.isArray(recipe.description) && recipe.description ? (
+                        <Text style={styles.descriptionText}>{formatText(recipe.description)}</Text>
+                    ) : (
+                        <Text style={styles.descriptionText}>Không có mô tả.</Text>
+                    )}
+
+                    <View style={styles.featuresRow}>
+                        <View style={styles.featureContainer}>
+                            <Ionicons name="leaf-outline" size={20} color="green" style={styles.featureIcon} />
+                            <View style={styles.featureTextContainer}>
+                                <Text style={styles.featureLabel}>Mức độ</Text>
+                                <Text style={styles.featureValue}>{formatText(recipe.name_level)}</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.featureContainer}>
+                            <Ionicons name="timer-outline" size={20} color="green" style={styles.featureIcon} />
+                            <View style={styles.featureTextContainer}>
+                                <Text style={styles.featureLabel}>Thời gian</Text>
+                                <Text style={styles.featureValue}>{formatText(recipe.timecook)} phút</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.featureContainer}>
+                            <Ionicons name="bonfire-outline" size={20} color="orange" style={styles.featureIcon} />
+                            <View style={styles.featureTextContainer}>
+                                <Text style={styles.featureLabel}>Danh mục</Text>
+                                <Text style={styles.featureValueNameCategory}>{formatText(recipe.name_category)}</Text>
+                            </View>
+                        </View>
                     </View>
-                </View>
-            </View>
+                </>
+            )}
         </View>
-    )
+    );
 }
 
+
 const styles = StyleSheet.create({
-    featureContainer: {
-        display: 'flex',
+    container: {
+        padding: 0,
+    },
+    loadingText: {
+        color: '#FFF',
+        textAlign: 'center',
+        marginTop: 20,
+        fontSize: 16,
+        fontFamily: 'outfit',
+    },
+    recipeImage: {
+        height: 250,
+        width: '100%',
+        resizeMode: 'cover',
+        borderRadius: 20,
+        marginBottom: 10,
+    },
+    header: {
+        justifyContent: 'space-between',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 7,
-        padding: 10,
-        backgroundColor: '#1E1E1E',
+        marginBottom: 10,
+    },
+    title: {
+        fontSize: 24,
+        fontFamily: 'outfit-bold',
+        textTransform: 'capitalize',
+        color: '#FFF',
+        flex: 1,
+        marginRight: 10,
+        lineHeight: 30,
+    },
+    bookmarkIconContainer: {
+        padding: 8,
+        borderRadius: 50,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+    },
+    chefContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    chefAvatar: {
+        width: 35,
+        height: 35,
+        borderRadius: 20,
+        backgroundColor: color.greytext,
+        marginRight: 10,
+        resizeMode: 'cover',
+    },
+    chefName: {
+        fontSize: 16,
+        fontFamily: 'outfit',
+        color: '#FFF',
+    },
+    descriptionHeading: {
+        fontSize: 20,
+        fontFamily: 'outfit-bold',
+        marginBottom: 8,
+        color: 'orange',
+    },
+    descriptionText: {
+        fontSize: 16,
+        fontFamily: 'outfit',
+        color: color.greytext,
+        lineHeight: 24,
+        marginBottom: 5,
+    },
+    featuresRow: {
+        marginTop: 15,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    featureContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        backgroundColor: '#2C2C2E',
         borderRadius: 12,
+        flex: 1,
+        marginHorizontal: 4,
+    },
+    featureIcon: {
+        marginRight: 8,
+    },
+    featureTextContainer: {
+        flexDirection: 'column',
+    },
+    featureLabel: {
+        color: '#AEAEB2',
+        fontSize: 12,
+        fontFamily: 'outfit',
+        marginBottom: 2,
+    },
+    featureValue: {
+        fontFamily: 'outfit-medium',
+        fontSize: 14,
+        color: '#E5E5EA',
+        textTransform: 'capitalize',
+    },
+    featureValueNameCategory: {
+        fontFamily: 'outfit-medium',
+        fontSize: 14,
+        color: 'orange',
+        textTransform: 'capitalize',
     }
-})
+});

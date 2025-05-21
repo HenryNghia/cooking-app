@@ -35,6 +35,15 @@ const _layout = () => {
                     }}
                 >
                     <Tabs.Screen
+                        name="home"
+                        options={{
+                            title: "Home",
+                            headerShown: false,
+                            tabBarIcon: ({ focused, color, size }) => (
+                                <HomeIcon size={hp(2.7)} color={color} />),
+                        }}
+                    />
+                    <Tabs.Screen
                         name="search"
                         options={{
                             title: "search",
@@ -43,17 +52,6 @@ const _layout = () => {
                                 <UserCircleIcon size={hp(2.7)} color={color} />),
                         }}
                     />
-
-                    <Tabs.Screen
-                        name="profile"
-                        options={{
-                            title: "Profile",
-                            headerShown: false,
-                            tabBarIcon: ({ focused, color, size }) => (
-                                <UserCircleIcon size={hp(2.7)} color={color} />),
-                        }}
-                    />
-
                     <Tabs.Screen
                         name="favorite"
                         options={{
@@ -64,21 +62,12 @@ const _layout = () => {
                         }}
                     />
                     <Tabs.Screen
-                        name="auth"
+                        name="profile"
                         options={{
-                            title: "auth",
+                            title: "Profile",
                             headerShown: false,
                             tabBarIcon: ({ focused, color, size }) => (
                                 <UserCircleIcon size={hp(2.7)} color={color} />),
-                        }}
-                    />
-                    <Tabs.Screen
-                        name="home"
-                        options={{
-                            title: "Home",
-                            headerShown: false,
-                            tabBarIcon: ({ focused, color, size }) => (
-                                <HomeIcon size={hp(2.7)} color={color} />),
                         }}
                     />
                 </Tabs>

@@ -36,14 +36,9 @@ export const register = async (name, email, password, confirmPassword) => {
 };
 
 // Đăng xuất
-export const logout = async () => {
-    try {
-        const response = await api.get('dang-xuat-tat-ca');
-        await AsyncStorage.removeItem('token'); // Xoá token khỏi storage
+export const logoutall = async () => {
+        const response = await api.post('dang-xuat-tat-ca');
         return response.data;
-    } catch (error) {
-        throw error.response?.data || { message: 'Đăng xuất thất bại' };
-    }
 };
 
 // lấy thông tin user đang đăng nhập
@@ -74,4 +69,9 @@ export const checkToken = async () => {
         // Các lỗi khác
         throw error.response?.data || { message: 'Lỗi khi kiểm tra token' };
     }
+};
+
+export const updateUser = async ( UserData) => {
+    const response = await api.post(`user/update-data`, UserData);
+    return response.data;
 };

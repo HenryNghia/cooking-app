@@ -12,23 +12,20 @@ export const getRecipeByRating = async () => {
     return response.data;
 };
 
-// Lấy tất cả công thức
+// Lấy tất cả  công thức mới nhất
 export const getRecipeByTime = async () => {
     const response = await api.get('/recipe/data-by-time');
+    return response.data;
+};
+// Lấy công thức user đã tạo
+export const getRecipeByUser = async () => {
+    const response = await api.get('/recipe/data-by-user');
     return response.data;
 };
 
 // Lấy công thức theo ID
 export const getRecipeById = async (id) => {
     const response = await api.get(`recipe/data/${id}`);
-    return response.data;
-};
-
-// Tìm kiếm công thức theo từ khóa
-export const getSearchSuggestions = async (query) => {
-    const response = await api.get(`recipe/search-data`, {
-        query
-    });
     return response.data;
 };
 
@@ -56,14 +53,16 @@ export const addRecipe = async (RecipeData) => {
 };
 
 // Cập nhật công thức
-export const updateRecipe = async (id, RecipeData) => {
-    const response = await api.put(`recipe/update-data/${id}`, RecipeData);
+export const updateRecipe = async ( RecipeData) => {
+    const response = await api.post(`recipe/update-data`, RecipeData);
     return response.data;
 };
 
 // Xoá công thức
-export const deleteRecipe = async (id) => {
-    const response = await api.delete(`recipe/delete-data/${id}`);
+export const deleteRecipe = async (idrecipe) => {
+    const response = await api.post(`recipe/delete-data`, {
+        id : idrecipe
+    });
     return response.data;
 
 };

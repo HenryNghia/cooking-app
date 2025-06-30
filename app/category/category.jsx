@@ -59,6 +59,7 @@ export default function category() {
         <ScrollView style={{ backgroundColor: '#000000' }}>
             <View style={{ flex: 1 }}>
                 {/* Search bar */}
+                {/*
                 <View style={styles.searchBarContainer}>
                     <View style={styles.searchContainer}>
                         <TouchableOpacity onPress={handleSearch} style={styles.iconWrapper}>
@@ -86,7 +87,7 @@ export default function category() {
                         )}
                     </View>
                 </View>
-
+                */}
                 {/* View card */}
                 <View style={styles.cardcontainer}>
                     <View style={styles.headerWrapper}>

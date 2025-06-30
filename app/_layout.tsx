@@ -49,9 +49,9 @@ export default function RootLayout() {
                         const { name_category } = route.params || {};
                         return {
                             headerTitle: name_category ? `Các công thức ${name_category}` : 'Các công thức',
-                            headerRight: () => (
-                                <EvilIcons name="search" size={28} color="#FFF" />
-                            )
+                            // headerRight: () => (
+                            //     <EvilIcons name="search" size={28} color="#FFF" />
+                            // )
                         };
                     }}
                 />

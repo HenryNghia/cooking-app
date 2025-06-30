@@ -223,10 +223,10 @@ export default function CreateRecipeScreen() {
 
         try {
             const response = await addRecipe(formData); // Ensure addRecipe is correctly defined and imported
-            if (response.status === 200) {
+            if (response.status === true) {
                 Alert.alert("Thành công", response.message || "Công thức đã được tạo!");
                 resetForm();
-                router.push('/recipe-user'); // Ensure router is setup correctly
+                router.push('/recipe-user');
             } else {
                 Alert.alert("Lỗi", response.message || "Đã xảy ra lỗi khi tạo công thức.");
             }

@@ -16,7 +16,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import Colors from '../../constants/color';
 import Layout from '../../constants/layout'
 import Fonts from '../../constants/fonts'
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image as ExpoImage } from 'expo-image';
 
@@ -34,6 +34,11 @@ export default function ProfileScreen() {
         fetchUserData();
     }, []);
 
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchUserData();
+        }, [])
+    );
     // Lấy dữ liệu user đang đăng nhập
     const fetchUserData = async () => {
         setIsLoadingUser(true);
@@ -74,7 +79,7 @@ export default function ProfileScreen() {
     const handleLogout = async () => {
         Alert.alert(
             "Xác nhận đăng xuất",
-            "Bạn có chắc chắn muốn đăng xuất khỏi tất cả các thiết bị?",
+            "Bạn có chắc chắn muốn đăng xuất khỏi thiết bị?",
             [
                 {
                     text: "Hủy",
@@ -101,7 +106,7 @@ export default function ProfileScreen() {
 
                             if (response && response.status === true) {
                                 console.log('Đăng xuất thành công:', response.message);
-                                Alert.alert("Thành công", response.message || "Đã đăng xuất tất cả thiết bị.");
+                                Alert.alert("Thành công", response.message || "Đã đăng xuất thiết bị.");
                                 router.replace("/auth/login");
                             } else {
                                 console.warn('Backend reported logout failed:', response?.message);
@@ -174,7 +179,8 @@ export default function ProfileScreen() {
                     <View style={styles.profileIconContainer}>
                         <TouchableOpacity
                             onPress={() => router.push({
-                                pathname: '/change-profile'})}>
+                                pathname: '/change-profile'
+                            })}>
                             <AntDesign name="edit" size={24} color="white" style={styles.profileIcon} />
                         </TouchableOpacity>
                     </View>

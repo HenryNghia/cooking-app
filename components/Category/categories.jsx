@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen'
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { getAllCategories } from '../../services/categoryService';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 export default function category() {
 
@@ -15,6 +15,11 @@ export default function category() {
         fetchCategories();
     }, []);
 
+     useFocusEffect(
+            React.useCallback(() => {
+                fetchCategories();
+            }, [])
+        );
     const fetchCategories = async () => {
 
         try {

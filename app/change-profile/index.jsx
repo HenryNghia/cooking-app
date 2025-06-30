@@ -21,7 +21,6 @@ export default function index() {
     const [coverPhoto, setCoverPhoto] = useState(null);
     const [name, setName] = useState("");
     const scrollViewRef = useRef(null);
-    const [user, setUser] = useState({});
     useEffect(() => {
         fetchData();
     }, []);
@@ -65,7 +64,7 @@ export default function index() {
         try {
             const response = await updateUser(formData);
             console.log('API Update Response:', response);
-            if (response.status === true || response.status === 200 || response.status === 201) {
+            if (response.status === true ) {
                 Alert.alert("Thành công", response.message || "đã được cập nhật!");
                 router.back();
             } else {

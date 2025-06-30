@@ -114,20 +114,26 @@ const LoginScreen = () => {
                     <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                 </TouchableOpacity>
 
-                {/* Social Icons */}
-                <View style={styles.socialContainer}>
-                    <TouchableOpacity onPress={handleGoogleLogin} style={styles.socialButton}>
-                        <MaterialCommunityIcons name="google" size={30} color="#DB4437" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleFacebookLogin} style={styles.socialButton}>
-                        <MaterialCommunityIcons name="facebook" size={30} color="#4267B2" />
-                    </TouchableOpacity>
-                </View>
 
                 {/* Login Button */}
                 <TouchableOpacity style={styles.mainButtonOutline} onPress={handleLogin}>
-                    <Text style={[styles.mainButtonText, styles.mainButtonTextOutline]}>Login</Text>
+                    <Text style={[styles.mainButtonText, styles.mainButtonTextOutline]}>Sign in</Text>
                 </TouchableOpacity>
+
+                <View style={styles.divider}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.dividerLine} />
+                </View>
+
+                {/* <View style={styles.socialContainer}> */}
+                <TouchableOpacity onPress={handleGoogleLogin} style={styles.socialButton}>
+                    <MaterialCommunityIcons name="google" size={30} color="#DB4437" />
+                    <Text style={[styles.mainButtonText, styles.mainButtonTextOutline]}>   Sign in with Google</Text>
+                </TouchableOpacity>
+                {/* </View> */}
+
+
 
                 {/* Navigation Link */}
                 <View style={styles.bottomTextContainer}>
@@ -143,7 +149,6 @@ const LoginScreen = () => {
 
 export default LoginScreen;
 
-// --- Styles (Dùng chung cho cả 2 màn hình) ---
 const styles = StyleSheet.create({
     background: {
         flex: 1,
@@ -228,10 +233,18 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     socialButton: {
-
-        marginHorizontal: 15,
-
+        borderColor: '#FFF',
+        borderWidth: 1.5,
+        paddingVertical: 8,
+        borderRadius: 30,
+        alignItems: 'center',
+        width: '100%',
+        marginBottom: 20,
+        backgroundColor: 'transparent',
+        flexDirection: 'row',
+        justifyContent: 'center',
     },
+
     mainButtonOrange: {
         backgroundColor: '#FF9800',
         paddingVertical: 15,
@@ -252,7 +265,7 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         alignItems: 'center',
         width: '100%',
-        marginBottom: 20,
+        marginBottom: 10,
         backgroundColor: 'transparent',
     },
     mainButtonText: {
@@ -275,6 +288,21 @@ const styles = StyleSheet.create({
     linkText: {
         color: '#FF9800',
         fontWeight: 'bold',
+    },
+    divider: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginVertical: 10,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    },
+    dividerText: {
+        marginHorizontal: 10,
+        color: 'rgba(255, 255, 255, 0.8)',
+        fontSize: 16,
     },
 });
 

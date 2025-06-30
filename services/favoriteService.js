@@ -6,6 +6,10 @@ export const getCategoryByUser = async () => {
   return response.data;
 };
 
+export const check = async () => {
+  const response = await api.get('favorite/check-data-favorite');
+  return response.data;
+};
 // Lấy công thức theo ID
 export const getFavoriteById = async (id) => {
   const response = await api.get(`favorite/${id}`);

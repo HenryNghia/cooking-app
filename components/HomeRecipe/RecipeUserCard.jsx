@@ -3,9 +3,9 @@ import React from 'react';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { useEffect, useState } from "react";
 import { getRecipeByTime } from '../../services/recipeService';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { addFavorite, checkFavorite } from '../../services/favoriteService';
+import { addFavorite, check } from '../../services/favoriteService';
 
 export default function RecipeUser() {
     const [recipes, setRecipes] = useState([]);
@@ -17,42 +17,60 @@ export default function RecipeUser() {
         setLoading(true);
         FetchRecipe();
     }, []);
-    
-    
+
+    useFocusEffect(
+        React.useCallback(() => {
+            FetchRecipe();
+        }, [])
+    );
     const FetchRecipe = async () => {
+        setLoading(true);
+        setMessage('Đang tải công thức của bạn...');
+
         try {
-            const recipeResponse = await getRecipeByTime();
+            // 1. Lấy danh sách công thức (ví dụ: getRecipeByTime hoặc một hàm riêng cho recipe của user)
+            const recipeResponse = await getRecipeByTime(); // Hoặc getRecipesByUser() nếu có
 
-            if (recipeResponse.status === 200 && recipeResponse.data) {
+            if (recipeResponse.status === 200 && recipeResponse.data && recipeResponse.data.length > 0) {
                 const fetchedRecipes = recipeResponse.data;
+                let favoriteRecipeIds = new Set();
 
-                const favoriteCheckPromises = fetchedRecipes.map(recipe =>
-                    checkFavorite({ recipe_id: recipe.id })
-                        .catch(error => {
-                            console.error(`Failed to check favorite status for recipe ${recipe.id}:`, error);
-                            return { recipeId: recipe.id, status: 500 };
-                        })
-                );
+                // 2. Gọi API checkAllFavorites MỘT LẦN DUY NHẤT
+                try {
+                    const favoriteApiResponse = await check(); // Sử dụng hàm mới
 
-                const checkResults = await Promise.all(favoriteCheckPromises);
+                    if (favoriteApiResponse.status === 200 && favoriteApiResponse.data) {
+                        // Backend trả về data là mảng các object: [{recipe_id: X}, {recipe_id: Y}]
+                        favoriteApiResponse.data.forEach(fav => favoriteRecipeIds.add(fav.recipe_id));
+                    } else if (favoriteApiResponse.status === 201) {
+                        // console.log('User has no favorites or list is empty.');
+                    } else if (favoriteApiResponse.status === 401) {
+                        console.warn('User not authenticated. Cannot check favorite statuses.');
+                    }
+                } catch (favError) {
+                    console.error('Failed to fetch favorite statuses:', favError);
+                    // Vẫn tiếp tục hiển thị recipes, isFavorite sẽ là false
+                }
 
-                const recipesWithFavStatus = fetchedRecipes.map((recipe, index) => {
-                    const checkResult = checkResults[index];
-                    return {
-                        ...recipe,
-                        isFavorite: checkResult?.status === 200
-                    };
-                });
+                // 3. Kết hợp trạng thái yêu thích
+                const recipesWithFavStatus = fetchedRecipes.map(recipe => ({
+                    ...recipe,
+                    isFavorite: favoriteRecipeIds.has(recipe.id)
+                }));
 
                 setRecipes(recipesWithFavStatus);
                 setMessage('');
-            } else {
+            } else if (recipeResponse.status === 200 && (!recipeResponse.data || recipeResponse.data.length === 0)) {
+                setMessage('Bạn chưa có công thức nào hoặc không tìm thấy công thức.');
+                setRecipes([]);
+            }
+            else {
                 setMessage(recipeResponse.message || 'Không tìm thấy công thức.');
                 setRecipes([]);
             }
         } catch (error) {
-            console.error('Failed to fetch recipes or check favorites:', error);
-            setMessage('Lỗi khi tải công thức hoặc kiểm tra trạng thái yêu thích.');
+            console.error('Failed to fetch recipes or process data:', error);
+            setMessage('Lỗi khi tải công thức. Vui lòng thử lại.');
             setRecipes([]);
         } finally {
             setLoading(false);

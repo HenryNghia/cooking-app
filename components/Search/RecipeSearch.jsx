@@ -11,52 +11,15 @@ import {
 } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { router } from 'expo-router';
-import { addFavorite, deleteFavorite, checkFavorite } from '../../services/favoriteService';
 
 export default function RecipeSearch({ recipes, searchKeyword, message }) {
 
     const [internalRecipes, setInternalRecipes] = useState([]);
-    const [checkingFavorites, setCheckingFavorites] = useState(true);
 
     useEffect(() => {
-        processRecipes();
+        setInternalRecipes(recipes);
     }, [recipes]);
-    const processRecipes = async () => {
-        setCheckingFavorites(true);
-        if (!recipes || recipes.length === 0) {
-            setInternalRecipes([]);
-            setCheckingFavorites(false);
-            return;
-        }
 
-        try {
-            const favoriteCheckPromises = recipes.map(recipe =>
-                checkFavorite({ recipe_id: recipe.id })
-                    .catch(error => {
-                        console.error(`Failed to check favorite status for recipe ${recipe.id}:`, error);
-                        return { recipeId: recipe.id, status: 500 };
-                    })
-            );
-
-            const checkResults = await Promise.all(favoriteCheckPromises);
-
-            const recipesWithFavStatus = recipes.map((recipe, index) => {
-                const checkResult = checkResults[index];
-                return {
-                    ...recipe,
-                    isFavorite: checkResult?.status === 200
-                };
-            });
-
-            setInternalRecipes(recipesWithFavStatus);
-
-        } catch (error) {
-            console.error('Error processing recipes with favorite status:', error);
-            setInternalRecipes(recipes.map(recipe => ({ ...recipe, isFavorite: false }))); // Default to not favorite on error
-        } finally {
-            setCheckingFavorites(false);
-        }
-    };
     const renderStars = (rating) => {
         const stars = [];
         const roundedRating = Math.round(rating * 2) / 2;
@@ -76,112 +39,42 @@ export default function RecipeSearch({ recipes, searchKeyword, message }) {
         return stars;
     };
 
-    const handleFavorite = async (recipeId) => {
-        const recipeToToggleIndex = internalRecipes.findIndex(r => r.id === recipeId);
-        if (recipeToToggleIndex === -1) return;
-
-        const recipeToToggle = internalRecipes[recipeToToggleIndex];
-        const currentFavoriteStatus = recipeToToggle.isFavorite;
-
-        const updatedRecipes = [...internalRecipes];
-        updatedRecipes[recipeToToggleIndex] = {
-            ...recipeToToggle,
-            isFavorite: !currentFavoriteStatus
-        };
-        setInternalRecipes(updatedRecipes);
-
-
-        try {
-            let response;
-            if (currentFavoriteStatus) {
-                console.log("Attempting to delete favorite:", recipeId);
-                response = await deleteFavorite(recipeId);
-            } else {
-                console.log("Attempting to add favorite:", { recipe_id: recipeId });
-                const data = { recipe_id: recipeId };
-                response = await addFavorite(data);
-            }
-
-            if (response && response.status === 200) {
-                console.log('Thao tác yêu thích thành công:', response.message);
-                Alert.alert('Thành công', response.message || (currentFavoriteStatus ? 'Đã xóa khỏi yêu thích!' : 'Đã thêm vào yêu thích!'));
-            } else {
-                console.error('Thao tác yêu thích thất bại:', response?.message);
-                Alert.alert('Thất bại', response?.message || 'Có lỗi xảy ra!');
-                const revertedRecipes = [...internalRecipes]; // Use the state *before* optimistic update for reverting
-                revertedRecipes[recipeToToggleIndex] = {
-                    ...recipeToToggle,
-                    isFavorite: currentFavoriteStatus
-                };
-                setInternalRecipes(revertedRecipes);
-            }
-        } catch (error) {
-            console.error('Lỗi khi thực hiện thao tác yêu thích:', error);
-            Alert.alert('Lỗi', 'Lỗi kết nối hoặc server.');
-            const revertedRecipes = [...internalRecipes]; // Use the state *before* optimistic update for reverting
-            revertedRecipes[recipeToToggleIndex] = {
-                ...recipeToToggle,
-                isFavorite: currentFavoriteStatus
-            };
-            setInternalRecipes(revertedRecipes);
-        }
-    };
-
-
     return (
         <View style={styles.recipeSearchContainer}>
             <View style={styles.rowContainer}>
-                {checkingFavorites ? (
-                    <View style={styles.messageContainer}>
-                        <ActivityIndicator size="large" color="#FFA500" />
-                        <Text style={styles.messageText}>
-                            Đang load dữ liệu...
-                        </Text>
-                    </View>
-                ) : (
-                    internalRecipes && internalRecipes.length > 0 ? (
-                        internalRecipes.map((item) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                onPress={() => router.push({
-                                    pathname: '/recipe-detail/[id]',
-                                    params: { id: item.id },
-                                })}
-                                style={styles.cardWrapper}
-                            >
-                                <View style={styles.cardContentContainer}>
-                                    <TouchableOpacity
-                                        style={styles.heartIcon}
-                                        onPress={(e) => {
-                                            e.stopPropagation(); // Prevent card press
-                                            handleFavorite(item.id);
-                                        }}
-                                    >
-                                        <Icon name={item.isFavorite ? "bookmark" : "bookmark-o"} size={22} color="#FFF" />
-                                    </TouchableOpacity>
-                                    <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
-                                    <View style={styles.textContainer}>
-                                        <Text style={styles.title} numberOfLines={1}>
-                                            {item.title}
-                                        </Text>
-                                        <View style={styles.ratingContainer}>
-                                            {renderStars(item.rating)}
-                                        </View>
-                                        <Text style={styles.chef} numberOfLines={1}>
-                                            {item.name}
-                                        </Text>
+                {internalRecipes && internalRecipes.length > 0 ? (
+                    internalRecipes.map((item) => (
+                        <TouchableOpacity
+                            key={item.id}
+                            onPress={() => router.push({
+                                pathname: '/recipe-detail/[id]',
+                                params: { id: item.id },
+                            })}
+                            style={styles.cardWrapper}
+                        >
+                            <View style={styles.cardContentContainer}>
+                                <Image source={{ uri: item.image }} style={styles.image} resizeMode="cover" />
+                                <View style={styles.textContainer}>
+                                    <Text style={styles.title} numberOfLines={1}>
+                                        {item.title}
+                                    </Text>
+                                    <View style={styles.ratingContainer}>
+                                        {renderStars(item.rating)}
                                     </View>
+                                    <Text style={styles.chef} numberOfLines={1}>
+                                        {item.name}
+                                    </Text>
                                 </View>
-                            </TouchableOpacity>
-                        ))
-                    ) : (
-                        message && (
-                            <View style={styles.messageContainer}>
-                                <Text style={styles.messageText}>
-                                    {message}
-                                </Text>
                             </View>
-                        )
+                        </TouchableOpacity>
+                    ))
+                ) : (
+                    message && (
+                        <View style={styles.messageContainer}>
+                            <Text style={styles.messageText}>
+                                {message}
+                            </Text>
+                        </View>
                     )
                 )}
             </View>
@@ -193,23 +86,21 @@ const styles = StyleSheet.create({
     recipeSearchContainer: {
         backgroundColor: '#000',
         paddingBottom: hp(2),
-        paddingHorizontal: wp(3), // Added horizontal padding for consistency
+        paddingHorizontal: wp(3),
     },
-
     messageContainer: {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 20,
         width: '100%',
-        height: hp(20), // Give it some height
+        height: hp(20),
     },
     messageText: {
         color: '#FFF',
         textAlign: 'center',
-        fontSize: hp(2), // Adjusted font size
+        fontSize: hp(2),
     },
-
     rowContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -240,10 +131,10 @@ const styles = StyleSheet.create({
     },
     title: {
         color: '#FFF',
-        fontSize: hp(1.9), // Adjusted font size
+        fontSize: hp(1.9),
         fontWeight: 'bold',
         marginBottom: 5,
-        textTransform: 'capitalize', // Added capitalize
+        textTransform: 'capitalize',
     },
     ratingContainer: {
         flexDirection: 'row',
@@ -257,16 +148,5 @@ const styles = StyleSheet.create({
         color: '#B0B0B0',
         fontSize: hp(1.6),
         fontStyle: 'italic',
-    },
-    heartIcon: {
-        position: 'absolute',
-        top: hp(1.5), // Adjusted position
-        right: wp(2.5), // Adjusted position
-        zIndex: 2,
-        backgroundColor: 'transparent',
-        padding: wp(1.5), // Adjusted padding
-        borderRadius: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
 });

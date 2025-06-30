@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
 import { Tabs } from 'expo-router'
-import { HeartIcon, HomeIcon, UserCircleIcon } from 'react-native-heroicons/outline'
+import { HeartIcon, HomeIcon, MagnifyingGlassIcon, UserCircleIcon } from 'react-native-heroicons/outline'
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen'
 import CreateButton from '../../components/Createbutton'
 import { SearchProvider } from '../../context/SearchContext';
@@ -46,16 +46,16 @@ const _layout = () => {
                     <Tabs.Screen
                         name="search"
                         options={{
-                            title: "search",
+                            title: "Tìm kiếm",
                             headerShown: false,
                             tabBarIcon: ({ focused, color, size }) => (
-                                <UserCircleIcon size={hp(2.7)} color={color} />),
+                                <MagnifyingGlassIcon size={hp(2.7)} color={color} />),
                         }}
                     />
                     <Tabs.Screen
                         name="favorite"
                         options={{
-                            title: "Favorite",
+                            title: "Yêu thích",
                             headerShown: false,
                             tabBarIcon: ({ focused, color, size }) => (
                                 <HeartIcon size={hp(2.7)} color={color} />),
@@ -64,7 +64,7 @@ const _layout = () => {
                     <Tabs.Screen
                         name="profile"
                         options={{
-                            title: "Profile",
+                            title: "Hồ sơ",
                             headerShown: false,
                             tabBarIcon: ({ focused, color, size }) => (
                                 <UserCircleIcon size={hp(2.7)} color={color} />),

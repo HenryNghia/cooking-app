@@ -25,34 +25,41 @@ const RegisterScreen = () => {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
     const { login } = useAuth();
-    const handleRegister = async () => {
-        console.log('Registering with:', { name, email, password, confirmPassword });
 
-        if (!name || !email || !password || !confirmPassword) {
-            alert('Vui lòng điền đầy đủ thông tin!');
-            return;
+  const handleRegister = async () => {
+    console.log('Registering with:', { name, email, password, confirmPassword });
+
+    if (!name || !email || !password || !confirmPassword) {
+        alert('Vui lòng điền đầy đủ thông tin!');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        alert('Mật khẩu xác nhận không khớp!');
+        return;
+    }
+
+    try {
+        const registrationData = await register(name, email, password);
+        // Check the status from the backend registration response
+        if (registrationData && registrationData.status === true) {
+            alert(registrationData.message || 'Đăng ký thành công! Vui lòng đăng nhập.'); 
+            await login(email, password);
+            router.push('/auth/login'); // Redirect to home page after successful registration and login
+        } else {
+            alert(registrationData.message || 'Đăng ký không thành công, vui lòng thử lại.');
         }
 
-        if (password !== confirmPassword) {
-            alert('Mật khẩu xác nhận không khớp!');
-            return;
-        }
-
-        try {
-            const data = await register(name, email, password, confirmPassword);
-            await login(email, password); // Gọi login lại sau khi đăng ký thành công
-            router.replace('/auth/login'); // Điều hướng sang trang chính (hoặc sửa thành `/auth/login` nếu bạn muốn)
-        } catch (error: any) {
-            console.error(error);
-            alert(error.message || 'Đăng ký thất bại!');
-        }
-    };
+    } catch (error: any) {
+        console.error('Registration or subsequent Login failed:', error);
+        // error.message should now correctly be "Email đã tồn tại" if that's the issue
+        alert(error.message || 'Đăng ký thất bại!');
+    }
+};
 
     const handelLinkLogin = () => {
         router.push('/auth/login')
     }
-    const handleGoogleRegister = () => console.log('Register with Google');
-    const handleFacebookRegister = () => console.log('Register with Facebook');
 
     return (
         <ImageBackground
@@ -134,14 +141,14 @@ const RegisterScreen = () => {
                 </View>
 
                 {/* Social Icons */}
-                <View style={styles.socialContainer}>
+                {/* <View style={styles.socialContainer}>
                     <TouchableOpacity onPress={handleGoogleRegister} style={styles.socialButton}>
                         <MaterialCommunityIcons name="google" size={30} color="#DB4437" />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleFacebookRegister} style={styles.socialButton}>
                         <MaterialCommunityIcons name="facebook" size={30} color="#4267B2" />
                     </TouchableOpacity>
-                </View>
+                </View> */}
 
                 {/* Register Button */}
                 <TouchableOpacity style={styles.mainButtonOrange} onPress={handleRegister}>

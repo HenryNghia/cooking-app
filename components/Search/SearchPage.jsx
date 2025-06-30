@@ -37,7 +37,7 @@ export default function SearchScreen() {
             const data = await getAllRecipes();
             if (data.status === 200) {
                 setRecipes(data.data);
-                setMessage(data.message || 'Recipes loaded.'); // Ensure message is set
+                setMessage(data.message || 'Recipes loaded.');
             } else {
                 setMessage(data.message || 'No recipes found.');
                 setRecipes([]);
@@ -67,10 +67,6 @@ export default function SearchScreen() {
     const handleSearch = async (keywordToSearch) => { // Allow passing keyword directly
         const finalKeyword = (typeof keywordToSearch === 'string' ? keywordToSearch : searchKeyword).trim();
         if (!finalKeyword) {
-            // Optionally, fetch all recipes or show a specific message if search is empty
-            // FetchRecipe(); // Or set a message like "Please enter a keyword"
-            // For now, if search is empty, it might show "Search failed" or previous recipes based on service.
-            // Let's ensure recipes are cleared if keyword is empty.
             setRecipes([]);
             setMessage('Please enter a search term.');
             setIsSearching(false);

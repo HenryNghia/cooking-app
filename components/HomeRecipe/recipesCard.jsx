@@ -1,56 +1,77 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react"; // Gom import React
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import { getRecipeByRating } from '../../services/recipeService';
-import { router } from 'expo-router';
+import { getRecipeByRating } from '../../services/recipeService'; // Giả sử hàm này lấy recipes cho user
+import { useFocusEffect, useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import { addFavorite, checkFavorite, deleteFavorite } from '../../services/favoriteService';
+// Import hàm để check tất cả favorites MỘT LẦN
+import { addFavorite, check } from '../../services/favoriteService'; // Đổi tên `checkFavorite` thành `checkAllFavorites` hoặc tên hàm đúng của bạn
 
-const RecipeComponent = () => {
+export default function RecipeUser() {
     const [recipes, setRecipes] = useState([]);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
-        setMessage('Đang tải công thức...');
-        setLoading(true);
+        // Không cần setMessage ở đây nữa, FetchRecipe sẽ xử lý
         FetchRecipe();
-    }, []);
-   
+    }, []); // Chỉ chạy một lần khi component mount
+
+    useFocusEffect(
+        React.useCallback(() => {
+            FetchRecipe();
+        }, [])
+    );
+
     const FetchRecipe = async () => {
+        setLoading(true);
+        setMessage('Đang tải công thức của bạn...');
+
         try {
-            const recipeResponse = await getRecipeByRating();
+            // 1. Lấy danh sách công thức (ví dụ: getRecipeByTime hoặc một hàm riêng cho recipe của user)
+            const recipeResponse = await getRecipeByRating(); // Hoặc getRecipesByUser() nếu có
 
-            if (recipeResponse.status === 200 && recipeResponse.data) {
+            if (recipeResponse.status === 200 && recipeResponse.data && recipeResponse.data.length > 0) {
                 const fetchedRecipes = recipeResponse.data;
+                let favoriteRecipeIds = new Set();
 
-                const favoriteCheckPromises = fetchedRecipes.map(recipe =>
-                    checkFavorite({ recipe_id: recipe.id })
-                        .catch(error => {
-                            console.error(`Failed to check favorite status for recipe ${recipe.id}:`, error);
-                            return { recipeId: recipe.id, status: 500 };
-                        })
-                );
+                // 2. Gọi API checkAllFavorites MỘT LẦN DUY NHẤT
+                try {
+                    const favoriteApiResponse = await check(); // Sử dụng hàm mới
 
-                const checkResults = await Promise.all(favoriteCheckPromises);
+                    if (favoriteApiResponse.status === 200 && favoriteApiResponse.data) {
+                        // Backend trả về data là mảng các object: [{recipe_id: X}, {recipe_id: Y}]
+                        favoriteApiResponse.data.forEach(fav => favoriteRecipeIds.add(fav.recipe_id));
+                    } else if (favoriteApiResponse.status === 201) {
+                        // console.log('User has no favorites or list is empty.');
+                    } else if (favoriteApiResponse.status === 401) {
+                        console.warn('User not authenticated. Cannot check favorite statuses.');
+                    }
+                } catch (favError) {
+                    console.error('Failed to fetch favorite statuses:', favError);
+                    // Vẫn tiếp tục hiển thị recipes, isFavorite sẽ là false
+                }
 
-                const recipesWithFavStatus = fetchedRecipes.map((recipe, index) => {
-                    const checkResult = checkResults[index];
-                    return {
-                        ...recipe,
-                        isFavorite: checkResult?.status === 200
-                    };
-                });
+                // 3. Kết hợp trạng thái yêu thích
+                const recipesWithFavStatus = fetchedRecipes.map(recipe => ({
+                    ...recipe,
+                    isFavorite: favoriteRecipeIds.has(recipe.id)
+                }));
 
                 setRecipes(recipesWithFavStatus);
                 setMessage('');
-            } else {
+            } else if (recipeResponse.status === 200 && (!recipeResponse.data || recipeResponse.data.length === 0)) {
+                setMessage('Bạn chưa có công thức nào hoặc không tìm thấy công thức.');
+                setRecipes([]);
+            }
+            else {
                 setMessage(recipeResponse.message || 'Không tìm thấy công thức.');
                 setRecipes([]);
             }
         } catch (error) {
-            console.error('Failed to fetch recipes or check favorites:', error);
-            setMessage('Lỗi khi tải công thức hoặc kiểm tra trạng thái yêu thích.');
+            console.error('Failed to fetch recipes or process data:', error);
+            setMessage('Lỗi khi tải công thức. Vui lòng thử lại.');
             setRecipes([]);
         } finally {
             setLoading(false);
@@ -76,73 +97,63 @@ const RecipeComponent = () => {
         return stars;
     };
 
-    const handleFavorite = async (recipeId) => {
-        const recipeToToggle = recipes.find(r => r.id === recipeId);
-        if (!recipeToToggle) return;
+    const handleFavorite = async (recipeId, currentIsFavorite) => {
 
-        const currentFavoriteStatus = recipeToToggle.isFavorite;
+        if (currentIsFavorite) {
+            Alert.alert('Thông báo', 'Công thức này đã có trong danh sách yêu thích.');
 
-        setRecipes(prevRecipes =>
-            prevRecipes.map(recipe =>
-                recipe.id === recipeId ? { ...recipe, isFavorite: !currentFavoriteStatus } : recipe
-            )
-        );
+            return;
+        }
 
         try {
-            let response;
-            if (currentFavoriteStatus) {
-                console.log("Attempting to delete favorite:", recipeId);
-                response = await deleteFavorite(recipeId);
-            } else {
-                console.log("Attempting to add favorite:", { recipe_id: recipeId });
-                const data = { recipe_id: recipeId };
-                response = await addFavorite(data);
-            }
+            console.log("Attempting to add recipe to favorites:", recipeId);
+            const response = await addFavorite({ recipe_id: recipeId });
 
             if (response && response.status === 200) {
-                console.log('Thao tác yêu thích thành công:', response.message);
-                Alert.alert('Thành công', response.message || (currentFavoriteStatus ? 'Đã xóa khỏi yêu thích!' : 'Đã thêm vào yêu thích!'));
-            } else {
-                console.error('Thao tác yêu thích thất bại:', response?.message);
-                Alert.alert('Thất bại', response?.message || 'Có lỗi xảy ra!');
+                console.log('Thêm thành công:', response.message);
+                Alert.alert('Thành công', response.message || 'Đã thêm vào yêu thích!');
                 setRecipes(prevRecipes =>
                     prevRecipes.map(recipe =>
-                        recipe.id === recipeId ? { ...recipe, isFavorite: currentFavoriteStatus } : recipe
+                        recipe.id === recipeId ? { ...recipe, isFavorite: true } : recipe
                     )
                 );
+            } else {
+                console.log('Thêm thất bại:', response?.message);
+                Alert.alert('Thất bại', response?.message || 'Không thể thêm vào yêu thích.');
             }
         } catch (error) {
-            console.error('Lỗi khi thực hiện thao tác yêu thích:', error);
-            Alert.alert('Lỗi', 'Lỗi kết nối hoặc server.');
-            setRecipes(prevRecipes =>
-                prevRecipes.map(recipe =>
-                    recipe.id === recipeId ? { ...recipe, isFavorite: currentFavoriteStatus } : recipe
-                )
-            );
+            console.error('Lỗi khi thêm:', error);
+            Alert.alert('Lỗi', 'Lỗi khi kết nối để thêm yêu thích.');
         }
     };
 
-
+    // JSX giữ nguyên cấu trúc hiển thị, nhưng FetchRecipe và handleFavorite đã được cập nhật
     return (
+        // Trong JSX, recipes.slice(0, 4).map(...) sẽ chỉ hiển thị 4 item đầu tiên.
+        // Nếu component này dùng để hiển thị TẤT CẢ recipes của user, bạn nên bỏ .slice(0,4)
+        // hoặc có logic pagination/tải thêm.
+        // Nếu nó chỉ là một phần nhỏ trên một màn hình khác, thì slice(0,4) có thể đúng.
         <ScrollView style={styles.scrollViewContainer} contentContainerStyle={styles.scrollViewContent}>
             <View style={styles.container}>
+                {/* Bạn có thể muốn thêm Header ở đây giống như component trước nếu cần */}
+                {/* <View style={styles.headerrecipe}>
+                    <Text style={styles.headingrecipe}>Công thức của bạn</Text>
+                </View> */}
                 <View style={styles.listContent}>
                     {loading ? (
                         <View style={styles.messageContainer}>
                             <ActivityIndicator size="large" color="#FFA500" />
-                            <Text style={styles.messageText}>
-                                {message}
-                            </Text>
+                            <Text style={styles.messageText}>{message}</Text>
                         </View>
                     ) : (
                         recipes && recipes.length > 0 ? (
-                            recipes.slice(0, 4).map((item) => (
+                            recipes.slice(0, 4).map((item) => ( // LƯU Ý: recipes.slice(0, 4)
                                 <TouchableOpacity
                                     onPress={() => router.push({
                                         pathname: '/recipe-detail/[id]',
                                         params: { id: item.id }
                                     })}
-                                    key={item.id}
+                                    key={item.id.toString()} // Key nên là string
                                     style={styles.cardWrapper}
                                 >
                                     <View style={styles.container_card}>
@@ -150,7 +161,7 @@ const RecipeComponent = () => {
                                             style={styles.heartIcon}
                                             onPress={(e) => {
                                                 e.stopPropagation();
-                                                handleFavorite(item.id);
+                                                handleFavorite(item.id, item.isFavorite); // Truyền trạng thái hiện tại
                                             }}
                                         >
                                             <Icon
@@ -170,7 +181,7 @@ const RecipeComponent = () => {
                                                 {renderStars(item.rating)}
                                             </View>
                                             <Text style={styles.chef} numberOfLines={1}>
-                                                {item.name}
+                                                {item.name} {/* Giả sử item.name là tên người tạo/đầu bếp */}
                                             </Text>
                                         </View>
                                     </View>
@@ -190,8 +201,7 @@ const RecipeComponent = () => {
     );
 }
 
-export default RecipeComponent;
-
+// Styles giữ nguyên như bạn cung cấp
 const styles = StyleSheet.create({
     scrollViewContainer: {
         flex: 1,
@@ -242,19 +252,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 3,
     },
-    messageContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 20,
-        width: '100%',
-        height: hp(20),
-    },
-    messageText: {
-        color: '#FFFFFF',
-        textAlign: 'center',
-        fontSize: hp(2),
-    },
     heartIcon: {
         position: 'absolute',
         top: hp(1.5),
@@ -262,7 +259,7 @@ const styles = StyleSheet.create({
         zIndex: 1,
         padding: wp(1),
         borderRadius: 20,
-        backgroundColor: 'transparent',
+        backgroundColor: 'transparent', 
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -292,5 +289,19 @@ const styles = StyleSheet.create({
         color: '#B0B0B0',
         fontSize: hp(1.6),
         fontStyle: 'italic',
+    },
+    messageContainer: {
+        // flex: 1, // Xóa để không chiếm hết không gian nếu không có item
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 20,
+        width: '100%', // Để message container chiếm toàn bộ chiều rộng
+        minHeight: hp(20), // Đảm bảo có chiều cao tối thiểu
+    },
+    messageText: {
+        color: '#FFFFFF',
+        textAlign: 'center',
+        fontSize: hp(2),
+        marginTop: hp(1),
     },
 });

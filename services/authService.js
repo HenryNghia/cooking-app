@@ -18,27 +18,19 @@ export const login = async (email, password) => {
 };
 
 // Đăng ký
-export const register = async (name, email, password, confirmPassword) => {
-    try {
-        const response = await api.post('register', {
-            name,
-            email,
-            password,
-            password_confirmation: confirmPassword,
-        });
+export const register = async (name, email, password /* confirmPassword is not sent to backend */) => {
+    const response = await api.post('register', {
+        name,
+        email,
+        password,
+    });
+    return response.data;
 
-        const token = response.data.token;
-        await AsyncStorage.setItem('token', token); // Lưu token nếu cần sau đăng ký
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || { message: 'Đăng ký thất bại' };
-    }
 };
-
 // Đăng xuất
 export const logoutall = async () => {
-        const response = await api.post('dang-xuat-tat-ca');
-        return response.data;
+    const response = await api.post('dang-xuat-tat-ca');
+    return response.data;
 };
 
 // lấy thông tin user đang đăng nhập
@@ -71,7 +63,7 @@ export const checkToken = async () => {
     }
 };
 
-export const updateUser = async ( UserData) => {
+export const updateUser = async (UserData) => {
     const response = await api.post(`user/update-data`, UserData);
     return response.data;
 };

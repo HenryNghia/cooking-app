@@ -7,6 +7,10 @@ import { useRouter } from 'expo-router';
 import { SearchContext } from '../../context/SearchContext';
 import { searchRecipeALL, getAllRecipes } from '../../services/recipeService';
 import RecipeSearch from '../../components/Search/RecipeSearch';
+import * as tf from '@tensorflow/tfjs';
+import { bundleResourceIO, decodeJpeg } from '@tensorflow/tfjs-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 interface Recipe {
     id: string;
@@ -30,8 +34,31 @@ export default function SearchScreen() {
     const [message, setMessage] = useState<string>('');
     const [isSearching, setIsSearching] = useState<boolean>(false);
 
+    const [isTfReady, setIsTfReady] = useState(false);
+    const [model, setModel] = useState<any>(null);
+    const [image, setImage] = useState<string | null>(null);
+    const [result, setResult] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const labels = ['gà rán', 'sườn nướng'];
+
+    useEffect(() => {
+        const loadModel = async () => {
+            await tf.ready();
+            console.log('✅ TensorFlow sẵn sàng');
+            setIsTfReady(true);
+            const modelJson = require('../../assets/ml/model.json');
+            const modelWeights = require('../../assets/ml/weights.bin');
+            const loadedModel = await tf.loadLayersModel(bundleResourceIO(modelJson, modelWeights));
+            setModel(loadedModel);
+            console.log('model đã được tải thành công');
+        };
+        loadModel();
+    }, []);
+
     useEffect(() => {
         if (!isSearchFocused && !isSearching) {
+            setSharedSearchKeyword('');
             fetchRecipes();
         }
     }, [isSearchFocused]);
@@ -41,6 +68,8 @@ export default function SearchScreen() {
             setIsSearching(false);
         }
     }, [isSearchFocused]);
+
+    
     const fetchRecipes = async () => {
         try {
             const data = await getAllRecipes();
@@ -56,7 +85,7 @@ export default function SearchScreen() {
         }
     };
 
-    const handleSearch = async () => {
+     const handleSearch = async () => {
         const finalKeyword = sharedSearchKeyword.trim();
         try {
             setIsSearching(true);
@@ -78,6 +107,7 @@ export default function SearchScreen() {
         }
     };
 
+
     const handleRemoveHistoryItem = (itemToRemove: string) => {
         const updatedHistory: string[] = searchHistory.filter((item: string) => item !== itemToRemove);
         setSearchHistory(updatedHistory);
@@ -92,6 +122,59 @@ export default function SearchScreen() {
         setSharedSearchKeyword('');
     };
 
+
+    const handleSearchImage = async () => {
+        try {
+            // 1. Chọn ảnh
+            const res = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                base64: false,
+            });
+
+            if (res.canceled) return;
+
+            const uri = res.assets[0].uri;
+
+            // 2. Đọc ảnh từ đường dẫn `uri` và chuyển nó thành chuỗi base64.
+            const file = await FileSystem.readAsStringAsync(uri, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+
+            // Tạo một mảng byte từ `ArrayBuffer`, để đưa vào giải mã ảnh.
+            const buffer = tf.util.encodeString(file, 'base64').buffer as ArrayBuffer;
+            const raw = new Uint8Array(buffer);
+            // chuyển ảnh JPEG thành tensor có shape [height, width, channels]
+            const imageTensor = decodeJpeg(raw);
+
+            // 3. Resize + chuẩn hóa
+            const resized = tf.image.resizeBilinear(imageTensor, [224, 224]);
+            const normalized = resized.div(tf.scalar(255)).expandDims(0);
+
+            // 4. Dự đoán
+            const prediction = model.predict(normalized) as tf.Tensor;
+            const predictionData = await prediction.data();
+            const maxIndex = predictionData.indexOf(Math.max(...predictionData));
+            const predictedLabel = labels[maxIndex];
+
+            console.log('Kết quả dự đoán:', predictedLabel + ' (' + predictionData[maxIndex] * 100 + '%)');
+
+            const data = await searchRecipeALL(predictedLabel);
+            if (data.status === 200) {
+                setRecipes(data.data);
+                setMessage(data.message);
+                addToSearchHistory(predictedLabel);
+            } else {
+                setRecipes([]);
+                setMessage(data.message);
+            }
+            setIsSearchFocused(false);
+            Keyboard.dismiss();
+        } catch (error) {
+            console.error('❌ Lỗi nhận diện hình ảnh:', error);
+        }
+    };
+   
     const renderFocusedSearchUI = () => (
         <View style={styles.focusedContainer}>
             <View style={styles.focusedHeader}>
@@ -173,7 +256,7 @@ export default function SearchScreen() {
                             {sharedSearchKeyword || "Tìm kiếm công thức..."}
                         </Text>
                         <View style={styles.cameraIconContainer}>
-                            <TouchableOpacity style={{ paddingLeft: wp(3) }} onPress={() => alert('Camera!')}>
+                            <TouchableOpacity style={{ paddingLeft: wp(3) }} onPress={handleSearchImage}>
                                 <CameraIcon size={hp(2.5)} strokeWidth={3} color={'#FFF'} />
                             </TouchableOpacity>
                         </View>
@@ -187,7 +270,7 @@ export default function SearchScreen() {
                     </View>
                     <RecipeSearch recipes={recipes} searchKeyword={sharedSearchKeyword} message={message} />
                 </View>
-               
+
             </View>
 
         </ScrollView>
@@ -259,18 +342,18 @@ const styles = StyleSheet.create({
         paddingRight: wp(1),
     },
     headerWrapper: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingVertical: 10,
-            paddingHorizontal: 5,
-            marginBottom: 10,
-        },
-        heading: {
-            fontSize: 22,
-            fontWeight: 'bold',
-            color: '#FFF',
-        },
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+        marginBottom: 10,
+    },
+    heading: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#FFF',
+    },
     cardcontainer: {
         flex: 1,
         marginTop: hp(1),
